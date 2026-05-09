@@ -8,7 +8,7 @@ Week 1/12 — WIP
 
 ## Roadmap
 
-- [x] Week 1: local vLLM inference working (Ministral 3B on RTX 4060)
+- [x] Week 1: local vLLM inference working (Ministral 7B on NVIDIA RTX 4060)
 - [ ] Week 2: containerized vLLM, OpenAI-compatible API tested
 - [ ] Week 3-4: Kubernetes deployment (kind), basic monitoring
 - [ ] Week 5-6: migration to EKS with GPU nodes (g5.xlarge), Karpenter
@@ -18,7 +18,7 @@ Week 1/12 — WIP
 
 ## Stack
 
-- **Model**: Ministral 3B Instruct (Mistral AI, Apache 2.0)
+- **Model**: Ministral 7B Instruct (Mistral AI, Apache 2.0)
 - **Inference server**: vLLM
 - **Orchestration**: Kubernetes (kind → EKS)
 - **GPU autoscaling**: Karpenter + KEDA
