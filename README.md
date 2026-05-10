@@ -1,6 +1,6 @@
-# vLLM model serving on a cloud Kubernetes platform
+# Production-grade LLM serving platform on Kubernetes
 
-Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, full observability (Prometheus, DCGM, Grafana). 
+vLLM model serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, with full observability (Prometheus, DCGM, Grafana) and costs tracking.
 
 Built on Mistral open-weight models. 
 
@@ -146,7 +146,7 @@ Mistral 7B in FP16 requires ~14 GB VRAM — impossible on a 8 GB card. The AWQ 4
 The immutable OS means no `dnf install` — everything goes through `rpm-ostree` with a mandatory reboot. The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
 
 ### **Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** 
-=> visible in docs/week-01-baseline.md.
+See docs/week-01-baseline.md for the full benchmark results.
 
 ---
 
@@ -163,7 +163,11 @@ The goal is a Grafana dashboard tracking four key metrics in production:
 
 ## Why Mistral
 
-This project deliberately uses Mistral open-weight models rather than Meta's Llama or Alibaba's Qwen. Mistral AI is a Paris-based lab building sovereign European AI infrastructure — using and documenting their models in production is a concrete way to support that ecosystem. All models used in this project are released under the Apache 2.0 license.
+This project deliberately uses Mistral open-weight models rather than Meta's Llama or Alibaba's Qwen. 
+
+Mistral AI is a Paris-based lab building sovereign European AI infrastructure — using and documenting their models in production is a concrete way to support that ecosystem. All models used in this project are released under the Apache 2.0 license.
+
+This sovereignty-conscious approach aligns well with European corporates and financial institutions building their AI platforms.
 
 ---
 
