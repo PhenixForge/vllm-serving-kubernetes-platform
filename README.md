@@ -1,4 +1,4 @@
-# vllm-serving-kubernetes-platform
+# vLLM model serving on a cloud Kubernetes platform
 
 Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, full observability (Prometheus, DCGM, Grafana). Built on Mistral open-weight models. Documented end-to-end by a senior infrastructure engineer learning AI infrastructure in public.
 
