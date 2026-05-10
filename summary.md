@@ -17,7 +17,7 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 
 ```
 ┌─────────────┐     ┌──────────────────────────────────────────┐
-│   Client    │────▶│              Kubernetes (EKS)           │
+│   Client    │───▶│              Kubernetes (EKS)            │
 └─────────────┘     │                                          │
                     │  ┌──────────┐      ┌─────────────────┐   │
                     │  │  Service │────▶│   vLLM Pods     │   │
@@ -42,67 +42,63 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 
 ```mermaid
 graph TB
-    Client["Client<br/>OpenAI-compatible API"]
 
-    subgraph Local["Local - Fedora Silverblue 44"]
-        Podman["Podman Container<br/>vLLM 0.20.2"]
-        GPU1["NVIDIA RTX 4060<br/>8 GB VRAM"]
-        Model1["Mistral 7B Instruct<br/>AWQ 4-bit"]
+    Client["Client API"]
+
+    subgraph Local["Local Fedora Silverblue 44"]
+        Podman["Podman Container"]
+        GPU1["RTX 4060"]
+        Model1["Mistral 7B AWQ"]
 
         Podman --> GPU1
         Podman --> Model1
     end
 
-    subgraph EKS["AWS EKS - Target Architecture"]
+    subgraph EKS["AWS EKS"]
 
-        subgraph Serving["Inference Layer"]
-            Service["Kubernetes Service<br/>(LoadBalancer)"]
+        EKSRoot["EKS Cluster"]
+
+        subgraph Serving["Inference"]
+            Service["Kubernetes Service"]
 
             Pod1["vLLM Pod"]
             Pod2["vLLM Pod"]
-            Pod3["vLLM Pod<br/>(scaled)"]
 
             Service --> Pod1
             Service --> Pod2
-            Service -.->|scale-out| Pod3
         end
 
-        subgraph Scaling["Autoscaling Layer"]
-            KEDA["KEDA<br/>Pod autoscaler"]
-            Karpenter["Karpenter<br/>Node autoscaler"]
+        subgraph Scaling["Autoscaling"]
+            KEDA["KEDA"]
+            Karpenter["Karpenter"]
 
-            KEDA -.->|scale pods| Pod3
-            Karpenter -.->|provision g5.xlarge| GPU2
+            KEDA -.-> Pod2
+            Karpenter -.-> GPU2
         end
 
         subgraph Nodes["GPU Nodes"]
-            GPU2["NVIDIA A10G<br/>24 GB VRAM"]
-            Model2["Mistral 7B Instruct<br/>FP16"]
+            GPU2["A10G"]
+            Model2["Mistral FP16"]
 
             GPU2 --> Model2
         end
 
-        subgraph Observability["Observability Layer"]
-            DCGM["DCGM Exporter"]
+        subgraph Observability["Observability"]
+            DCGM["DCGM"]
             Prometheus["Prometheus"]
             Grafana["Grafana"]
 
-            DCGM -->|gpu metrics| Prometheus
+            DCGM --> Prometheus
             Prometheus --> Grafana
         end
 
-        subgraph IaC["Infrastructure as Code"]
-            Terraform["Terraform"]
-        end
+        Terraform["Terraform"]
 
-        Pod1 -->|metrics| DCGM
-        Pod2 -->|metrics| DCGM
+        Terraform -.-> EKSRoot
     end
 
-    Client -->|Week 1| Podman
-    Client -->|Week 5-6| Service
-
-    Terraform -.->|provisions| EKS
+    Client --> Podman
+    Client --> Service
 ```
 
 ---
