@@ -19,7 +19,7 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 ## Architecture (target)
 
 ```
-┌─────────────┐     ┌──────────────────────────────────────────┐
+┌─────────────┐      ┌──────────────────────────────────────────┐
 │   Client    │────▶│              Kubernetes (EKS)            │
 └─────────────┘      │                                          │
                      │  ┌──────────┐      ┌─────────────────┐   │
