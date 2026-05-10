@@ -41,9 +41,8 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 ## Mermaid diagram
 
 ```mermaid
-
 graph TB
-    Client(["🖥️ Client\n(OpenAI-compatible API)"])
+    Client(["Client\n(OpenAI-compatible API)"])
 
     subgraph Local["Local — Fedora Silverblue 44"]
         Podman["Podman Container\nvLLM 0.20.2"]
@@ -95,8 +94,8 @@ graph TB
         Pod2 -->|"metrics"| DCGM
     end
 
-    Client -->|"Week 1 ✅"| Podman
-    Client -->|"Week 5-6 🎯"| Service
+    Client -->|"Week 1"| Podman
+    Client -->|"Week 5-6"| Service
     Terraform -.->|"provisions"| EKS
 
     classDef done fill:#1a7a4a,color:#fff,stroke:#0f5c35
