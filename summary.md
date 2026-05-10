@@ -1,4 +1,3 @@
-````markdown
 # vllm-serving-kubernetes-platform
 
 Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, full observability (Prometheus, DCGM, Grafana). Built on Mistral open-weight models. Documented end-to-end by a senior infrastructure engineer learning AI infrastructure in public.
@@ -167,4 +166,3 @@ Senior Infrastructure Engineer (AWS, Kubernetes, Terraform, GPU observability) t
 Documenting the full journey publicly — including dead ends, wrong turns, and real production constraints.
 
 [LinkedIn](https://www.linkedin.com/in/julien-p-68834731/) · [GitHub](https://github.com/PhenixForge)
-````
