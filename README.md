@@ -143,7 +143,11 @@ Getting vLLM running on a consumer GPU involved several non-obvious constraints 
 Mistral 7B in FP16 requires ~14 GB VRAM — impossible on a 8 GB card. The AWQ 4-bit quantized version fits in ~4 GB and delivers usable throughput. Understanding the difference between FP16, BF16, FP8, and AWQ quantization is a prerequisite for any AI infrastructure work.
 
 ### **Fedora Silverblue requires a different mental model.** 
-The immutable OS means no `dnf install` — everything goes through `rpm-ostree` with a mandatory reboot. The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
+The immutable OS means no `dnf install` — everything goes through `rpm-ostree` with a mandatory reboot. 
+
+The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. 
+
+Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
 
 ### **Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** 
 See docs/week-01-baseline.md for the full benchmark results.
@@ -173,7 +177,8 @@ This sovereignty-conscious approach aligns well with European corporates and fin
 
 ## Author
 
-Senior Infrastructure Engineer (AWS, Kubernetes, Terraform, GPU observability) transitioning into AI infrastructure.
+Senior Infrastructure Engineer (AWS, Kubernetes, Terraform, GPU observability) transitioning into AI infrastructure (as of May 2026).
+
 Documenting the full journey publicly — including dead ends, wrong turns, and real production constraints.
 
 [LinkedIn](https://www.linkedin.com/in/julien-p-68834731/) · [GitHub](https://github.com/PhenixForge)
