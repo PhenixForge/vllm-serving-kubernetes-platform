@@ -17,15 +17,15 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 
 ```
 ┌─────────────┐     ┌──────────────────────────────────────────┐
-│   Client    │────▶│              Kubernetes (EKS)            │
+│   Client    │────▶│              Kubernetes (EKS)           │
 └─────────────┘     │                                          │
                     │  ┌──────────┐      ┌─────────────────┐   │
-                    │  │  Service │─────▶│   vLLM Pods     │   │
+                    │  │  Service │────▶│   vLLM Pods     │   │
                     │  └──────────┘      │  Mistral 7B     │   │
                     │                    │  (GPU nodes)    │   │
                     │  ┌──────────┐      └────────┬────────┘   │
                     │  │  KEDA    │               │            │
-                    │  │ (scale   │◀──────────────┘            │
+                    │  │ (scale   │◀─────────────┘            │
                     │  │  pods)   │                            │
                     │  └──────────┘                            │
                     │                                          │
@@ -40,7 +40,7 @@ Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B In
 ---
 ## Mermaid diagram
 
-````mermaid
+```mermaid
 
 graph TB
     Client(["🖥️ Client\n(OpenAI-compatible API)"])
@@ -108,7 +108,7 @@ graph TB
     class Service,Pod1,Pod2,Pod3,GPU2,Model2 target
     class KEDA,Karpenter,Terraform infra
     class DCGM,Prometheus,Grafana obs
-````
+```
 
 ---
 

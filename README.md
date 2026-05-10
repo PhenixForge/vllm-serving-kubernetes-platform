@@ -1,6 +1,13 @@
 # vllm-serving-kubernetes-platform
 
-Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, full observability (Prometheus, DCGM, Grafana). Built on Ministral 3 (Mistral AI). Documented end-to-end by a senior infrastructure engineer learning AI infrastructure in public.
+Production-grade LLM serving on Kubernetes for enterprise environments — vLLM inference, GPU autoscaling, security hardening, full observability and cost tracking. Documented end-to-end by a senior infrastructure engineer.
+
+Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter, security hardening, full observability (Prometheus, DCGM, Grafana) and cost tracking. 
+
+Built on Ministral 3 (Mistral AI) for sovereignty and solidarity to the french ecosystem.
+
+Documented end-to-end by a senior infrastructure DevOps / SysOps.
+
 
 ## Status
 
