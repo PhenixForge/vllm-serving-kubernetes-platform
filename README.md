@@ -145,7 +145,8 @@ Mistral 7B in FP16 requires ~14 GB VRAM — impossible on a 8 GB card. The AWQ 4
 ### **Fedora Silverblue requires a different mental model.** 
 The immutable OS means no `dnf install` — everything goes through `rpm-ostree` with a mandatory reboot. The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
 
-**Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** visible in docs/week-01-baseline.md.
+### **Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** 
+=> visible in docs/week-01-baseline.md.
 
 ---
 
