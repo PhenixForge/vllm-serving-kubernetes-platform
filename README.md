@@ -152,7 +152,7 @@ Toolbox containers do not have GPU access by default — vLLM runs in a dedicate
 
 ### Secure Boot and NVIDIA drivers
 
-Secure Boot may need to be disabled in the BIOS when using proprietary NVIDIA drivers on Fedora Silverblue.
+The Secure Boot option may need to be disabled in the BIOS when using proprietary NVIDIA drivers on Linux.
 
 The NVIDIA kernel modules installed through RPM Fusion are not always signed with a key trusted by Secure Boot. If Secure Boot is enabled, the modules may fail to load, resulting in missing GPU acceleration.
 
