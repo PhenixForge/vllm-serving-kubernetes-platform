@@ -20,7 +20,7 @@ Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 
 
 ```
 ┌─────────────┐      ┌──────────────────────────────────────────┐
-│   Client    │────▶│              Kubernetes (EKS)            │
+│   Client    │────▶│             Kubernetes (EKS)             │
 └─────────────┘      │                                          │
                      │  ┌──────────┐      ┌─────────────────┐   │
                      │  │  Service │────▶│   vLLM Pods     │   │
