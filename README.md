@@ -142,12 +142,21 @@ Getting vLLM running on a consumer GPU involved several non-obvious constraints 
 ### **Model format matters more than model size.** 
 Mistral 7B in FP16 requires ~14 GB VRAM — impossible on a 8 GB card. The AWQ 4-bit quantized version fits in ~4 GB and delivers usable throughput. Understanding the difference between FP16, BF16, FP8, and AWQ quantization is a prerequisite for any AI infrastructure work.
 
+
 ### **Fedora Silverblue requires a different mental model.** 
 The immutable OS means no `dnf install` — everything goes through `rpm-ostree` with a mandatory reboot. 
 
 The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. 
 
 Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
+
+### Secure Boot and NVIDIA drivers
+
+Secure Boot may need to be disabled in the BIOS when using proprietary NVIDIA drivers on Fedora Silverblue.
+
+The NVIDIA kernel modules installed through RPM Fusion are not always signed with a key trusted by Secure Boot. If Secure Boot is enabled, the modules may fail to load, resulting in missing GPU acceleration.
+
+Alternative approaches exist, such as manually enrolling a Machine Owner Key (MOK) and signing the NVIDIA modules, but disabling Secure Boot remains the simplest option for many workstation setups and temporary personal test labs.
 
 ### **Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** 
 See docs/week-01-baseline.md for the full benchmark results.
