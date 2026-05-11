@@ -151,7 +151,8 @@ The NVIDIA Container Toolkit SSL configuration needed manual adjustment because 
 Toolbox containers do not have GPU access by default — vLLM runs in a dedicated Podman container launched from the host, not from inside toolbox.
 
 Because Fedora Silverblue is immutable, NVIDIA drivers are installed through rpm-ostree layering :
-```rpm-ostree install akmod-nvidia xorg-x11-drv-nvidia-cuda
+```
+rpm-ostree install akmod-nvidia xorg-x11-drv-nvidia-cuda
 nvidia-smi```
 
 It can surprise, but even after installation and reboot, it's still not available, as akmods requires some minutes to compile fully.
