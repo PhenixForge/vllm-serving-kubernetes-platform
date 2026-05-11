@@ -12,7 +12,7 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 **Week 1/12 — complete**
 
-Local vLLM inference running on a single RTX 4060 (8 GB VRAM) with Mistral 7B Instruct v0.2 AWQ quantization. Baseline latency and throughput metrics captured.
+Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) with Mistral 7B Instruct v0.2 AWQ quantization. Baseline latency and throughput metrics captured.
 
 ---
 
