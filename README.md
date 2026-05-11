@@ -153,7 +153,8 @@ Toolbox containers do not have GPU access by default — vLLM runs in a dedicate
 Because Fedora Silverblue is immutable, NVIDIA drivers are installed through rpm-ostree layering :
 ```
 rpm-ostree install akmod-nvidia xorg-x11-drv-nvidia-cuda
-nvidia-smi```
+nvidia-smi
+```
 
 It can surprise, but even after installation and reboot, it's still not available, as akmods requires some minutes to compile fully.
 
