@@ -1,0 +1,21 @@
+# Docker Containerfile
+FROM docker.io/vllm/vllm-openai:v0.20.2
+
+# Métadonnées
+LABEL maintainer="Julien P. <PhenixForge>"
+LABEL description="vLLM serving Mistral 7B AWQ - production-grade base image"
+LABEL org.opencontainers.image.source="https://github.com/PhenixForge/vllm-serving-kubernetes-platform"
+
+# Args configurables au build
+ARG MODEL_NAME=TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+ARG MAX_MODEL_LEN=2048
+
+ENV MODEL_NAME=${MODEL_NAME}
+ENV MAX_MODEL_LEN=${MAX_MODEL_LEN}
+ENV PYTHONUNBUFFERED=1
+
+# Healthcheck natif
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# the official image ENTRYPOINT is already a vllm serve, we don't override pas (we just put the default args).
