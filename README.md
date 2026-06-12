@@ -144,7 +144,7 @@ Mistral 7B in FP16 requires ~14 GB VRAM — impossible on a 8 GB card. The AWQ 4
 
 
 ### **Fedora Silverblue requires a different mental model.** 
-The immutable OS means no direct simple package install — everything goes through `rpm-ostree` with a mandatory reboot for OS changes, but most changes cannot happen. We need to create virtual environments with `toolbox`. As handy as it can be, it also come with additional management challenges !
+The **immutable OS** means no direct simple package install — everything goes through `rpm-ostree` with a mandatory reboot for OS changes, but most changes cannot happen. We need to create virtual environments with `toolbox`. As handy as it can be, it also come with additional management challenges !
 
 The NVIDIA Container Toolkit SSL configuration needed manual adjustment because rpm-ostree runs in an isolated context that cannot access the system CA bundle at the expected path. 
 
