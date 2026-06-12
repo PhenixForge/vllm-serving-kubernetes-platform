@@ -1,3 +1,10 @@
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.26%2B-326CE5?logo=kubernetes)](https://kubernetes.io/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go Version](https://img.shields.io/badge/Go-v1.22%2B-00ADD8?logo=go)](https://golang.org/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Julien-blue?logo=linkedin)](https://www.linkedin.com/in/julien-p-68834731/?locale=fr)
+[![GitHub Stars](https://img.shields.io/github/stars/PhenixForge/vllm-operator?style=social)](https://github.com/PhenixForge/vllm-operator/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/PhenixForge/vllm-operator/test.yml?branch=main)](https://github.com/PhenixForge/vllm-operator/actions)
+
 # Production-grade LLM serving platform on Kubernetes
 
 vLLM model serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter and KEDA, with full observability (Prometheus, DCGM, Grafana) and costs tracking.
