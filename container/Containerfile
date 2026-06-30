@@ -1,6 +1,7 @@
 # Docker Containerfile
-FROM docker.io/vllm/vllm-openai:v0.20.2
-
+# Docker Containerfile
+FROM docker.io/vllm/vllm-openai:v0.20.2 # image qui peut servir vLLM avec support OpenAI directement, avec le modèle open weight de mon choix.
+# available images at : https://hub.docker.com/r/vllm/vllm-openai/tags
 # Métadonnées
 LABEL maintainer="Julien P. <PhenixForge>"
 LABEL description="vLLM serving Mistral 7B AWQ - production-grade base image"
@@ -9,6 +10,7 @@ LABEL org.opencontainers.image.source="https://github.com/PhenixForge/vllm-servi
 # Args configurables au build
 ARG MODEL_NAME=TheBloke/Mistral-7B-Instruct-v0.2-AWQ
 ARG MAX_MODEL_LEN=2048
+ARG GPU_MEMORY_UTILIZATION=0.8  # <-- limite l'utilisation de la RAM du GPU à 80% max, car ma workstation fait tourner d'autres choses.
 
 ENV MODEL_NAME=${MODEL_NAME}
 ENV MAX_MODEL_LEN=${MAX_MODEL_LEN}
@@ -18,4 +20,8 @@ ENV PYTHONUNBUFFERED=1
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
-# the official image ENTRYPOINT is already a vllm serve, we don't override pas (we just put the default args).
+# Commande par défaut : on passe les args directement à vllm serve
+CMD ["--model", "${MODEL_NAME}", "--quantization", "awq", "--max-model-len", "${MAX_MODEL_LEN}", "--gpu-memory-utilization", "${GPU_MEMORY_UTILIZATION}"]
+
+# --quantization=awq Force l’utilisation de la quantification AWQ (4 bits), qui réduit la taille du modèle en mémoire (Mistral-7B AWQ ≈ 4 Go).
+# --max-model-len 2048 : Limite la taille du contexte à 2048 tokens, ce qui réduit la mémoire réservée pour les activations.
