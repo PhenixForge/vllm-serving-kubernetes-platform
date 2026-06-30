@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.source="https://github.com/PhenixForge/vllm-servi
 # Args configurables au build
 ARG MODEL_NAME=TheBloke/Mistral-7B-Instruct-v0.2-AWQ
 ARG MAX_MODEL_LEN=2048
-ARG GPU_MEMORY_UTILIZATION=0.8  # <-- limite l'utilisation de la RAM du GPU à 80% max, car ma workstation fait tourner d'autres choses.
+ARG GPU_MEMORY_UTILIZATION=0.7  # <-- limite l'utilisation de la RAM du GPU à 70% max, car ma workstation fait tourner d'autres choses.
 
 ENV MODEL_NAME=${MODEL_NAME}
 ENV MAX_MODEL_LEN=${MAX_MODEL_LEN}
