@@ -1,6 +1,6 @@
 # Docker Containerfile
-# Docker Containerfile
-FROM docker.io/vllm/vllm-openai:v0.20.2 # image qui peut servir vLLM avec support OpenAI directement, avec le modèle open weight de mon choix.
+FROM docker.io/vllm/vllm-openai:v0.20.2 
+# image qui peut servir vLLM avec support OpenAI directement, avec le modèle open weight de mon choix.
 # available images at : https://hub.docker.com/r/vllm/vllm-openai/tags
 # Métadonnées
 LABEL maintainer="Julien P. <PhenixForge>"
