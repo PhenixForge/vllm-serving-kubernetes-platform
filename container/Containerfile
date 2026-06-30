@@ -17,11 +17,12 @@ ENV MAX_MODEL_LEN=${MAX_MODEL_LEN}
 ENV PYTHONUNBUFFERED=1
 
 # Healthcheck natif
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \
+#  CMD curl -f http://localhost:8000/health || exit 1
+# Podman error, that works with docker : HEALTHCHECK is not supported for OCI image format and will be ignored.
 
 # Commande par défaut : on passe les args directement à vllm serve
-CMD ["--model", "${MODEL_NAME}", "--quantization", "awq", "--max-model-len", "${MAX_MODEL_LEN}", "--gpu-memory-utilization", "${GPU_MEMORY_UTILIZATION}"]
+CMD ["--model", "TheBloke/Mistral-7B-Instruct-v0.2-AWQ", "--quantization", "awq", "--max-model-len", "2048", "--gpu-memory-utilization", "0.8"]
 
 # --quantization=awq Force l’utilisation de la quantification AWQ (4 bits), qui réduit la taille du modèle en mémoire (Mistral-7B AWQ ≈ 4 Go).
 # --max-model-len 2048 : Limite la taille du contexte à 2048 tokens, ce qui réduit la mémoire réservée pour les activations.
