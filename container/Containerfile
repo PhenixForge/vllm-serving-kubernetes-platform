@@ -4,13 +4,13 @@ FROM docker.io/vllm/vllm-openai:v0.20.2
 # available images at : https://hub.docker.com/r/vllm/vllm-openai/tags
 # Métadonnées
 LABEL maintainer="Julien P. <PhenixForge>"
-LABEL description="vLLM serving Mistral 7B AWQ - production-grade base image"
+LABEL description="vLLM serving Mistral 7B AWQ Marlin- production-grade base optimized image"
 LABEL org.opencontainers.image.source="https://github.com/PhenixForge/vllm-serving-kubernetes-platform"
 
 # Args configurables au build
-ARG MODEL_NAME=TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+ARG MODEL_NAME=TheBloke/Mistral-7B-Instruct-v0.1-AWQ
 ARG MAX_MODEL_LEN=2048
-ARG GPU_MEMORY_UTILIZATION=0.7  # <-- limite l'utilisation de la RAM du GPU à 70% max, car ma workstation fait tourner d'autres choses.
+ARG GPU_MEMORY_UTILIZATION=0.6  # <-- limite l'utilisation de la RAM du GPU à 60% max, car ma workstation fait tourner d'autres choses.
 
 ENV MODEL_NAME=${MODEL_NAME}
 ENV MAX_MODEL_LEN=${MAX_MODEL_LEN}
@@ -22,7 +22,7 @@ ENV PYTHONUNBUFFERED=1
 # Podman error, that works with docker : HEALTHCHECK is not supported for OCI image format and will be ignored.
 
 # Commande par défaut : on passe les args directement à vllm serve
-CMD ["--model", "TheBloke/Mistral-7B-Instruct-v0.2-AWQ", "--quantization", "awq", "--max-model-len", "2048", "--gpu-memory-utilization", "0.8"]
+CMD ["TheBloke/Mistral-7B-Instruct-v0.1-AWQ", "--quantization", "awq_marlin", "--max-model-len", "880", "--gpu-memory-utilization", "0.6"]
 
 # --quantization=awq Force l’utilisation de la quantification AWQ (4 bits), qui réduit la taille du modèle en mémoire (Mistral-7B AWQ ≈ 4 Go).
 # --max-model-len 2048 : Limite la taille du contexte à 2048 tokens, ce qui réduit la mémoire réservée pour les activations.
