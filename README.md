@@ -133,8 +133,8 @@ graph TB
 ## Roadmap
 
 - [x] **Week 1** — local vLLM inference working (Mistral 7B AWQ on RTX 4060, baseline metrics captured)
-- [ ] **Week 2** — clean Containerfile, all OpenAI-compatible endpoints tested
-- [ ] **Week 3-4** — Kubernetes deployment on kind (local), Deployment + Service + ConfigMap manifests
+- [x] **Week 2** — clean Containerfile, all OpenAI-compatible endpoints tested
+- [v] **Week 3-4** — Kubernetes deployment on kind (local), Deployment + Service + ConfigMap manifests
 - [ ] **Week 5-6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling
 - [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
 - [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)
