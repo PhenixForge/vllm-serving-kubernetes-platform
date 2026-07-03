@@ -110,7 +110,6 @@ graph TB
     Client --> Podman
     Client --> Service
 ```
-
 ---
 
 ## Stack
@@ -139,6 +138,26 @@ graph TB
 - [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
 - [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)
 - [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article
+
+---
+## Observability targets
+
+The goal is a Grafana dashboard tracking four key metrics in production:
+
+- **TTFT** (time to first token) — P50 and P95
+- **Throughput** — tokens per second per GPU
+- **GPU utilization** — via DCGM Exporter
+- **Cost efficiency** — estimated cost per 1M tokens based on cloud instance pricing
+
+---
+
+## Why Mistral
+
+This project deliberately uses Mistral open-weight models rather than Meta's Llama or Alibaba's Qwen. 
+
+Mistral AI is a Paris-based lab building sovereign European AI infrastructure — using and documenting their models in production is a concrete way to support that ecosystem. All models used in this project are released under the Apache 2.0 license.
+
+This sovereignty-conscious approach aligns well with European corporates and financial institutions building their AI platforms.
 
 ---
 
@@ -187,29 +206,7 @@ The concept is strong, though, I will come back to it in some years!
 - **k3s** is great, light and conveninent, but less adapted for GPU labs ;
 - **minikube** was not available by default on my Fedora 44 and anyway it's a bit more complex.
 
-=> **Kind** is handy and it's the best of those three to handle GPU-based pods.
-
----
-
-## Observability targets
-
-The goal is a Grafana dashboard tracking four key metrics in production:
-
-- **TTFT** (time to first token) — P50 and P95
-- **Throughput** — tokens per second per GPU
-- **GPU utilization** — via DCGM Exporter
-- **Cost efficiency** — estimated cost per 1M tokens based on cloud instance pricing
-
----
-
-## Why Mistral
-
-This project deliberately uses Mistral open-weight models rather than Meta's Llama or Alibaba's Qwen. 
-
-Mistral AI is a Paris-based lab building sovereign European AI infrastructure — using and documenting their models in production is a concrete way to support that ecosystem. All models used in this project are released under the Apache 2.0 license.
-
-This sovereignty-conscious approach aligns well with European corporates and financial institutions building their AI platforms.
-
+=> **kind** is handy and it's the best of those three to handle GPU-based pods.
 ---
 
 ## Author
