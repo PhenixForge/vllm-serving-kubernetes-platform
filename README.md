@@ -2,8 +2,8 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-v1.22%2B-00ADD8?logo=go)](https://golang.org/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Julien-blue?logo=linkedin)](https://www.linkedin.com/in/julien-p-68834731/?locale=fr)
-[![GitHub Stars](https://img.shields.io/github/stars/PhenixForge/vllm-operator?style=social)](https://github.com/PhenixForge/vllm-operator/stargazers)
-[![CI](https://img.shields.io/github/actions/workflow/status/PhenixForge/vllm-operator/test.yml?branch=main)](https://github.com/PhenixForge/vllm-operator/actions)
+[![GitHub Stars](https://img.shields.io/github/stars/PhenixForge/vllm-serving-kubernetes-platform/?style=social)](https://github.com/PhenixForge/vllm-operator/stargazers)
+# [![CI](https://img.shields.io/github/actions/workflow/status/PhenixForge/vllm-serving-kubernetes-platform//test.yml?branch=main)](https://github.com/PhenixForge/vllm-operator/actions)
 
 # Production-grade LLM serving platform on Kubernetes
 
