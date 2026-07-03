@@ -17,7 +17,7 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 **Week 2/12 — complete**
 
-Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.2 AWQ quantization. Baseline latency and throughput metrics captured.
+Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
 Now, trying with a local Kubernetes cluster running a similar configuration
 
