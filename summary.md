@@ -11,12 +11,12 @@ Documented end-to-end by a senior infrastructure DevOps / SysOps.
 
 ## Status
 
-Week 1/12 — WIP
+Week 3/12 — WIP
 
 ## Roadmap
 
-- [x] Week 1: local vLLM inference working (Mistral 7B AWQ on NVIDIA RTX 4060)
-- [ ] Week 2: containerized vLLM, OpenAI-compatible API tested
+- [x] Week 1: local vLLM inference working (Mistral 7B AWQ Marlin on NVIDIA RTX 4060)
+- [x] Week 2: containerized vLLM, OpenAI-compatible API tested
 - [ ] Week 3-4: Kubernetes deployment (kind), basic monitoring
 - [ ] Week 5-6: migration to EKS with GPU nodes (g5.xlarge), Karpenter
 - [ ] Week 7-8: KEDA autoscaling on queue depth, load testing
@@ -25,7 +25,7 @@ Week 1/12 — WIP
 
 ## Stack
 
-- **Model**: Mistral 7B Instruct v0.2 (Mistral AI, Apache 2.0)
+- **Model**: Mistral-7B-Instruct-v0.1-AWQ (Mistral AI, Apache 2.0)
 - **Inference server**: vLLM
 - **Orchestration**: Kubernetes (kind → EKS)
 - **GPU autoscaling**: Karpenter + KEDA
@@ -33,5 +33,5 @@ Week 1/12 — WIP
 
 ## Author
 
-Senior Infrastructure Engineer transitioning into AI infrastructure (May 2026)
+Senior Infrastructure Engineer transitioning into AI infrastructure (since April 2026) ;
 Documenting the full journey publicly — including dead ends.
