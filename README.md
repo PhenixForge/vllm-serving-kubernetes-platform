@@ -184,9 +184,10 @@ After testing exensively Fedora Silverblue 43, I eventually chose to switch to t
 The concept is strong, though, I will come back to it in some years!
 
 ### Kind is the best local Kubernetes orchestrator for AI
-- k3s is great, light and conveninent, but less adapted for GPU labs ;
-- minikube was not available by default on my Fedora 44 and anyway it's a bit more complex.
--> Kind is handy and it's the best of those three to handle GPU-based pods.
+- **k3s** is great, light and conveninent, but less adapted for GPU labs ;
+- **minikube** was not available by default on my Fedora 44 and anyway it's a bit more complex.
+
+=> **Kind** is handy and it's the best of those three to handle GPU-based pods.
 
 ---
 
