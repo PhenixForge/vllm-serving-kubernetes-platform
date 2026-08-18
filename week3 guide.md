@@ -18,9 +18,9 @@ Intégrer KEDA si vous souhaitez un auto-scaling directement couplé à Promethe
 Mon scaledobject pointe vers prometheus-k8s.monitoring.svc.cluster.local, qui n'existera que semaine 4 (stack Prometheus/Grafana). 
 
 Deux options défendables : 
-Déployer un Prometheus minimal dès maintenant juste pour scraper `/metrics` de vLLM et valider le scaler end-to-end en semaine 3 ; 
+- Déployer un Prometheus minimal dès maintenant juste pour scraper `/metrics` de vLLM et valider le scaler end-to-end en semaine 3 ; 
 
-Sinon documenter explicitement que le manifest KEDA est écrit et relu, mais seulement testable une fois l'observabilité en place.
+- Sinon documenter explicitement que le manifest KEDA est écrit et relu, mais seulement testable une fois l'observabilité en place.
 
 ## Gestion du Cache & Persistent Volumes (PVC)
 
