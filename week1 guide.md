@@ -156,13 +156,14 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 
 ---
 
-## **Points Clés à Retenir**
-
-1. **Montage des périphériques NVIDIA** : Indispensable pour l’accès GPU sous Podman.
-2. **Désactivation du CUDA Graph Profiling** : `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` libère de la mémoire pour le cache KV.
-3. **Réduction de `max_model_len**` : `880` est la taille max compatible avec ta VRAM disponible.
-4. **Forcer IPv4** : `curl --ipv4` évite les problèmes de connexion IPv6.
-5. **Modèle léger** : `Mistral-7B-v0.1-AWQ` consomme moins de VRAM que la v0.2.
+>[!WARNING]
+>**Points Clés à Retenir**
+>
+>1. **Montage des périphériques NVIDIA** : Indispensable pour l’accès GPU sous Podman.
+>2. **Désactivation du CUDA Graph Profiling** : `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` libère de la mémoire pour le cache KV.
+>3. **Réduction de `max_model_len**` : `880` est la taille max compatible avec ta VRAM disponible.
+>4. **Forcer IPv4** : `curl --ipv4` évite les problèmes de connexion IPv6.
+>5. **Modèle léger** : `Mistral-7B-v0.1-AWQ` consomme moins de VRAM que la v0.2.
 
 ---
 
