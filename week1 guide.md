@@ -156,7 +156,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 
 ---
 
->[!WARNING]
+>[!NOTE]
 >**Points Clés à Retenir**
 >
 >1. **Montage des périphériques NVIDIA** : Indispensable pour l’accès GPU sous Podman.
