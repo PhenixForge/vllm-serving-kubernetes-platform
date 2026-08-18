@@ -18,6 +18,12 @@ Déployer un serveur local **vLLM** pour servir le modèle **Mistral-7B-Instruct
 
 >[!WARNING] Déployer Kubernetes sur un ordinateur personnel sous Linux avec une carte graphique 8Go impose des limites techniques. Cependant, nous allons aussi tester avec des GPU plus puissants sur le cloud d'AWS.
 
+> [!NOTE]
+Ceci est un test
+
+> [!CAUTION]
+Limites techniques explicitées ici.
+
 ---
 
 ## **Étapes Clés et Problèmes Résolus**
