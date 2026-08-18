@@ -1,0 +1,23 @@
+# Ce manifeste augmente les Pods si la métrique 
+# vllm:num_requests_waiting dépasse un certain seuil dans Prometheus
+apiVersion: keda.sh/v1alpha1 # doc = https://keda.sh/docs/2.20/migration/
+kind: ScaledObject
+metadata:
+  name: vllm-autoscaler
+  namespace: vllm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vllm-server
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  cooldownPeriod: 300
+  pollingInterval: 15
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+      metricName: vllm_num_requests_waiting
+      query: sum(vllm:num_requests_waiting{namespace="vllm"})
+      threshold: '5' # Déclenche le scale-up si > 5 requêtes attendent en file

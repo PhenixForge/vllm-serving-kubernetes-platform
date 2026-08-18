@@ -1,0 +1,29 @@
+#  Pour déployer vLLM en tant que Pod Kubernetes.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-mistral-7b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-mistral-7b
+  template:
+    metadata:
+      labels:
+        app: vllm-mistral-7b
+    spec:
+      containers:
+      - name: vllm
+        image: localhost/vllm-mistral-7b-v01:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS
+          value: "0"
+        resources:
+          limits:
+            nvidia.com/gpu: 1  # Requiert le plugin NVIDIA GPU Operator

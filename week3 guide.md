@@ -16,3 +16,54 @@ Intégrer KEDA si vous souhaitez un auto-scaling directement couplé à Promethe
 ## Gestion du Cache & Persistent Volumes (PVC)
 
 Configurer un stockage partagé performant ou un système de cache réseau (ex. ReadWriteMany via NFS/Ceph ou caching local par nœud) pour éviter le téléchargement répété des poids de modèles Hugging Face lors du spawn de nouveaux Pods.
+
+---
+
+# Reste à faire
+- Ajouter mon FQDN dans la configuration du LB nginx `ingress.yaml`
+
+- Étape 3 : Auto-scaling Horizontal (HPA & KEDA)
+
+L'autoscaling sur CPU/RAM classique n'est pas adapté aux LLM. Il est préférable d'utiliser KEDA (Kubernetes Event-driven Autoscaling) basé sur les métriques Prometheus exposées par vLLM (ex. nombre de requêtes en attente).
+
+### 3.1 Prérequis KEDA
+
+Installez KEDA dans mon cluster via Helm (si manquant) :
+
+```Bash
+helm repo add kedacore https://kedacore.github.io/charts
+helm repo update
+helm install keda kedacore/keda --namespace keda --create-namespace
+```
+
+### 3.2 Vérifier l'état dans Prometheus
+
+- Validation de la Semaine 3
+
+Déployer les configurations :
+
+```bash
+kubectl apply -f kubernetes/pvc.yaml
+kubectl apply -f kubernetes/deployment.yaml
+kubectl apply -f kubernetes/ingress.yaml
+kubectl apply -f kubernetes/keda-scaledobject.yaml
+```
+
+Tester le streaming Ingress :
+
+```bash
+curl -N http://vllm.local/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-model-name",
+    "messages": [{"role": "user", "content": "Raconte une histoire."}],
+    "stream": true
+  }'
+```
+
+Vérifier l'autoscaler :
+
+```bash
+kubectl get scaledobject -n vllm
+kubectl get hpa -n vllm
+```

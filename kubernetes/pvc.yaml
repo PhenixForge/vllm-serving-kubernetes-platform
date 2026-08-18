@@ -1,0 +1,12 @@
+# Pour éviter de re-télécharger les poids du modèle à chaque création de Pod (notamment lors du scale-up), un PVC partagé ou local est idéal.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-model-cache
+  namespace: vllm
+spec:
+  accessModes:
+    - ReadWriteOnce # Ou ReadWriteMany si vous avez un stockage réseau (NFS, Longhorn, Ceph)
+  resources:
+    requests:
+      storage: 50Gi
