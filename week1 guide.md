@@ -20,6 +20,10 @@ Déployer un serveur local **vLLM** pour servir le modèle **Mistral-7B-Instruct
 >Déployer Kubernetes sur sous Linux limite les possibilités, même avec une carte nVidia RTX.
 >Cependant, nous allons aussi tester avec des GPU plus puissants sur le cloud d'AWS.
 
+>[!WARNING]
+>**Une carte graphique 8Go impose des limites techniques**
+>Déployer Kubernetes sous Linux limite les possibilités, même avec une carte nVidia RTX.
+
 ---
 
 ## **Étapes Clés et Problèmes Résolus**
