@@ -159,7 +159,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 >[!NOTE]
 >**Points Clés à Retenir**
 >
->1. **Montage des périphériques NVIDIA** : Indispensable pour l’accès GPU sous Podman.
+>1. **Montage des périphériques NVIDIA dans le container** : Indispensable pour l’accès GPU sous Podman.
 >2. **Désactivation du CUDA Graph Profiling** : `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` libère de la mémoire pour le KV cache.
 >3. **Réduction de `max_model_len**` : `880` est la taille max compatible pour 8Go de VRAM disponible.
 >4. **Forcer IPv4** : `curl --ipv4` évite les problèmes de connexion IPv6.
@@ -172,7 +172,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 **Un conteneur Podman fonctionnel** qui :
 
 - Sert **Mistral-7B-v0.1-AWQ** en local.
-- Utilise **ton GPU RTX 4060** (8 Go VRAM).
+- Utilise **mon GPU RTX 4060** (8 Go VRAM).
 - Répond aux requêtes via une **API OpenAI-compatible** sur `http://localhost:8000`.
 - Est **optimisé pour éviter les erreurs de mémoire**.
 
