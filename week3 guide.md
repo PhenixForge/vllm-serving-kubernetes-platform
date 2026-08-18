@@ -13,6 +13,15 @@ Configurer un HPA (Horizontal Pod Autoscaler) basé sur des métriques personnal
 
 Intégrer KEDA si vous souhaitez un auto-scaling directement couplé à Prometheus (évite d'augmenter le nombre de pods inutilement sur une simple charge CPU).
 
+>[!NOTE]
+**Une dépendance tranchée consciemment : KEDA vs Prometheus**.
+Mon scaledobject pointe vers prometheus-k8s.monitoring.svc.cluster.local, qui n'existera que semaine 4 (stack Prometheus/Grafana). 
+
+Deux options défendables : 
+Déployer un Prometheus minimal dès maintenant juste pour scraper /metrics de vLLM et valider le scaler end-to-end en semaine 3 ; 
+
+Ou documenter explicitement que le manifest KEDA est écrit et relu, mais seulement testable une fois l'observabilité en place.
+
 ## Gestion du Cache & Persistent Volumes (PVC)
 
 Configurer un stockage partagé performant ou un système de cache réseau (ex. ReadWriteMany via NFS/Ceph ou caching local par nœud) pour éviter le téléchargement répété des poids de modèles Hugging Face lors du spawn de nouveaux Pods.
