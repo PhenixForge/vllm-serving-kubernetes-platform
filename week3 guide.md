@@ -20,11 +20,15 @@ Configurer un stockage partagé performant ou un système de cache réseau (ex. 
 ---
 
 # Reste à faire
-- Ajouter mon FQDN dans la configuration du LB nginx `ingress.yaml`
+## Finir la configuration du LB nginx `ingress.yaml`
+Ajouter mon FQDN dedans.
 
-- Étape 3 : Auto-scaling Horizontal (HPA & KEDA)
+## Étape 3 : Auto-scaling Horizontal (HPA & KEDA)
 
-L'autoscaling sur CPU/RAM classique n'est pas adapté aux LLM. Il est préférable d'utiliser KEDA (Kubernetes Event-driven Autoscaling) basé sur les métriques Prometheus exposées par vLLM (ex. nombre de requêtes en attente).
+>[!NOTE]
+>L'autoscaling sur CPU/RAM classique n'est pas adapté aux LLM. 
+
+Il est préférable d'utiliser KEDA (Kubernetes Event-driven Autoscaling) basé sur les métriques Prometheus exposées par vLLM (ex. nombre de requêtes en attente).
 
 ### 3.1 Prérequis KEDA
 
@@ -38,7 +42,7 @@ helm install keda kedacore/keda --namespace keda --create-namespace
 
 ### 3.2 Vérifier l'état dans Prometheus
 
-- Validation de la Semaine 3
+## Validation de la Semaine 3
 
 Déployer les configurations :
 
