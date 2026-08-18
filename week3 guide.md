@@ -53,6 +53,12 @@ helm install keda kedacore/keda --namespace keda --create-namespace
 
 ## Validation de la Semaine 3
 
+Créer l'environnement de travail
+
+```bash
+kubectl create namespace vllm
+```
+
 Déployer les configurations :
 
 ```bash
