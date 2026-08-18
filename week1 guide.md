@@ -17,8 +17,7 @@ Déployer un serveur local **vLLM** pour servir le modèle **Mistral-7B-Instruct
 - **Modèle** : Mistral-7B-Instruct-v0.1-AWQ (téléchargé dans `~/models/`)
 
 >[!WARNING]
->**Une carte graphique 8Go impose des limites techniques.**
-
+>**Une carte graphique 8Go impose des limites techniques.** 
 >Déployer Kubernetes sous Linux limite les possibilités, même avec une carte nVidia RTX.
 
 ---
