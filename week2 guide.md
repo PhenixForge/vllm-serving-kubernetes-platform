@@ -32,7 +32,7 @@ mkdir -p ~/git/vllm-serving-kubernetes-platform/container
 cd ~/git/vllm-serving-kubernetes-platform/container
 
 # Crée le Containerfile
-nano Containerfile
+vi Containerfile
 ```
 
 #### **Contenu du `Containerfile**`
