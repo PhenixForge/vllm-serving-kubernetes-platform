@@ -1,4 +1,4 @@
-# Guide complet : Déploiement de vLLM avec Mistral-7B sur GPU & Fedora 44
+# Guide complet : déploiement de vLLM & Mistral sur Linux
 
 ---
 
