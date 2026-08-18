@@ -169,7 +169,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 
 ## **Résultat Final**
 
-✅ **Un conteneur Podman fonctionnel** qui :
+**Un conteneur Podman fonctionnel** qui :
 
 - Sert **Mistral-7B-v0.1-AWQ** en local.
 - Utilise **ton GPU RTX 4060** (8 Go VRAM).
@@ -178,7 +178,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 
 ---
 
-## 📌 **Dépannage**
+## **Dépannage**
 
 ### Si le conteneur ne démarre pas :
 
@@ -206,7 +206,7 @@ curl --ipv4 -X POST http://localhost:8000/v1/completions \
 
 ---
 
-## 🔗 **Ressources Utiles**
+## **Ressources Utiles**
 
 - [Documentation vLLM](https://docs.vllm.ai/)
 - [Modèle Mistral-7B-Instruct-v0.1-AWQ sur Hugging Face](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-AWQ)
