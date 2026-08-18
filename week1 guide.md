@@ -1,4 +1,4 @@
-# Guide Complet : Déploiement de vLLM avec Mistral-7B sur Fedora 44 (RTX 4060, 8 Go VRAM)
+# Guide complet : Déploiement de vLLM avec Mistral-7B sur GPU & Fedora 44
 
 ---
 
