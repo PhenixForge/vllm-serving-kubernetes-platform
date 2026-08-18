@@ -4,20 +4,20 @@ L'objectif de cette cinquième semaine est de faire passer la plateforme d'un é
 
 ---
 
-#### **1. Authentification & Gestion de la Charge API**
+## **1. Authentification & Gestion de la Charge API**
 
 * **API Gateway & Ingress Security :**
 * Implémenter un filtrage par clé API (API Keys) ou jetons Bearer JWT à l'entrée de la passerelle pour restreindre l'accès à l'endpoint OpenAPI de vLLM.
 * Mettre en place un **Rate Limiting** strict (via Ingress NGINX annotations, EnvoyFilter ou API Gateway) pour éviter le déni de service (DoS) sur le modèle.
 
-#### **2. Isolation Réseau (Network Policies)**
+## **2. Isolation Réseau (Network Policies)**
 
 * **Verrouillage du Namespace `vllm` :**
 * Appliquer des **NetworkPolicies** strictes pour refuser tout le trafic entrant/sortant non sollicité.
 * Ne permettre le trafic entrant vers le pod vLLM **que depuis le contrôleur Ingress**.
 * Restreindre le trafic sortant (*egress*) aux seuls points de terminaison nécessaires (ex. téléchargement Hugging Face ou serveur de métriques Prometheus).
 
-#### **3. Sécurisation des Workloads & Runtime Security**
+## **3. Sécurisation des Workloads & Runtime Security**
 
 * **SecurityContext du Pod & Container :**
 * Appliquer le principe du moindre privilège : exécuter le conteneur vLLM sans accès `root` (`runAsNonRoot: true`, `readOnlyRootFilesystem`).
@@ -26,7 +26,7 @@ L'objectif de cette cinquième semaine est de faire passer la plateforme d'un é
 * **Gestion des Secrets et des Jetons Hugging Face :**
 * Sortir les jetons d'accès (ex. `HF_TOKEN` pour les modèles fermés/gated) des fichiers YAML/ConfigMaps et basculer sur des **Kubernetes Secrets** ou une intégration External Secrets Operator / Vault.
 
-#### **4. Haute Disponibilité & Stratégies de Robustesse**
+## **4. Haute Disponibilité & Stratégies de Robustesse**
 
 * **Graceful Shutdown & Health Probes :**
 * Ajuster les `livenessProbe` et `readinessProbe` spécifiquement pour vLLM (éviter de tuer le pod pendant le chargement initial des poids en VRAM).
