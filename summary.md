@@ -12,12 +12,14 @@ Documented end-to-end by a senior infrastructure DevOps / SysOps.
 ## Status
 
 Week 3/12 — WIP
+Core Platform: Weeks 1–5 (local k8s + EKS)
+Extensions: RAG + MCP + Evaluation (separate sessions, post-Week-5)
 
 ## Roadmap
 
-- [x] Week 1: local vLLM inference working (Mistral 7B AWQ Marlin on NVIDIA RTX 4060)
+- [V] Week 1: local vLLM inference working (Mistral 7B AWQ Marlin on NVIDIA RTX 4060)
 - [x] Week 2: containerized vLLM, OpenAI-compatible API tested
-- [ ] Week 3-4: Kubernetes deployment (kind), basic monitoring
+- [-] Week 3-4: Kubernetes deployment (kind), basic monitoring
 - [ ] Week 5-6: migration to EKS with GPU nodes (g5.xlarge), Karpenter
 - [ ] Week 7-8: KEDA autoscaling on queue depth, load testing
 - [ ] Week 9-10: full observability (Prometheus, DCGM, Grafana dashboards)
