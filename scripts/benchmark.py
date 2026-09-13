@@ -4,7 +4,7 @@ import os
 HOST = os.environ.get("VLLM_HOST", "192.168.1.24")
 URL = f"http://{HOST}:8000/v1/chat/completions"
 
-MODEL = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
+MODEL = "TheBloke/Mistral-7B-Instruct-v0.1-AWQ"
 URL   = "http://192.168.1.24:8000/v1/chat/completions"
 PROMPT = "List 5 Kubernetes best practices for resource limits."
 

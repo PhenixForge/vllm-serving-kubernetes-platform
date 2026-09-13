@@ -3,10 +3,10 @@
 # Lance vLLM en local avec config par défaut
 set -euo pipefail
 
-MODEL="${MODEL:-TheBloke/Mistral-7B-Instruct-v0.2-AWQ}"
+MODEL="${MODEL:-TheBloke/Mistral-7B-Instruct-v0.1-AWQ}"
 PORT="${PORT:-8000}"
-GPU_MEM="${GPU_MEM:-0.80}"
-MAX_LEN="${MAX_LEN:-2048}"
+GPU_MEM="${GPU_MEM:-0.6}"
+MAX_LEN="${MAX_LEN:-880}"
 CACHE_DIR="${CACHE_DIR:-$HOME/llm-models/huggingface}"
 
 echo "Starting vLLM server..."
@@ -26,7 +26,7 @@ podman run -d \
   -v "${CACHE_DIR}:/root/.cache/huggingface:Z" \
   vllm-serving:latest \
   --model "$MODEL" \
-  --quantization awq \
+  --quantization awq_marlin \
   --max-model-len "$MAX_LEN" \
   --gpu-memory-utilization "$GPU_MEM" \
   --dtype half

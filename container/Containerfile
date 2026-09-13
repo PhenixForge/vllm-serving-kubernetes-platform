@@ -22,7 +22,10 @@ ENV PYTHONUNBUFFERED=1
 # Podman error, that works with docker : HEALTHCHECK is not supported for OCI image format and will be ignored.
 
 # Commande par défaut : on passe les args directement à vllm serve
+# NOTE : forme exec (tableau JSON) -> pas de substitution des ARG/ENV ci-dessus.
+# Les valeurs sont donc figées en dur ici ; pour changer de modèle/contexte/mémoire,
+# éditer cette ligne directement (les --build-arg MODEL_NAME/MAX_MODEL_LEN n'ont aucun effet).
 CMD ["TheBloke/Mistral-7B-Instruct-v0.1-AWQ", "--quantization", "awq_marlin", "--max-model-len", "880", "--gpu-memory-utilization", "0.6", "--trust-request-chat-template"]
 
-# --quantization=awq Force l’utilisation de la quantification AWQ (4 bits), qui réduit la taille du modèle en mémoire (Mistral-7B AWQ ≈ 4 Go).
-# --max-model-len 2048 : Limite la taille du contexte à 2048 tokens, ce qui réduit la mémoire réservée pour les activations.
+# --quantization=awq_marlin : quantification AWQ (4 bits) optimisée Marlin (+20-30% perf vs awq), réduit la taille du modèle en mémoire (Mistral-7B AWQ ≈ 4 Go).
+# --max-model-len 880 : limite la taille du contexte à 880 tokens (réduit depuis 2048/1024 pour tenir dans le KV cache disponible sur 8 Go de VRAM).

@@ -192,8 +192,8 @@ The NVIDIA kernel modules installed through RPM Fusion are not always signed wit
 
 Alternative approaches exist, such as manually enrolling a Machine Owner Key (MOK) and signing the NVIDIA modules, but disabling Secure Boot remains the simplest option for many workstation setups and temporary personal test labs.
 
-### **Baseline metrics (Mistral 7B AWQ, RTX 4060, context 2048 tokens):** 
-See docs/week-01-baseline.md for the full benchmark results.
+### **Baseline metrics (Mistral 7B AWQ, RTX 4060):** 
+See docs/week-01-baseline.md for the full benchmark results — captured against the original v0.2-AWQ setup (context 2048 tokens), before the switch to v0.1-AWQ (context 880 tokens) described above.
 
 ---
 ## Week 2 — lessons learned

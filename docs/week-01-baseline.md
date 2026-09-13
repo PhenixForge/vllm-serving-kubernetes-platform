@@ -1,3 +1,5 @@
+> Captured 2026-05-09 against Mistral-7B-Instruct-v0.2-AWQ (context 2048 tokens), before the project switched to v0.1-AWQ for VRAM reasons (see [week1 guide.md](../week1%20guide.md)). `scripts/benchmark.py` now targets v0.1-AWQ, so re-running it will produce different numbers than below — kept here as the historical Week 1 record.
+
 Run 01: 32.77s | 200 tokens | 6.1 tok/s
 Run 02: 33.05s | 200 tokens | 6.1 tok/s
 Run 03: 32.78s | 200 tokens | 6.1 tok/s
