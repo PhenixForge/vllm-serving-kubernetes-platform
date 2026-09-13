@@ -17,25 +17,25 @@ Retrieval-Augmented Generation (RAG) layer for the vLLM serving platform, enabli
 └──────────────────────────────┬──────────────────────────────────┘
                                │
                     ┌──────────▼─────────────┐
-                    │   MCP Server (Python)   │
-                    │  - Retrieval engine     │
-                    │  - Re-ranking           │
-                    │  - Prompt assembly      │
-                    └──────────────┬──────────┘
+                    │   MCP Server (Python)  │
+                    │  - Retrieval engine    │
+                    │  - Re-ranking          │
+                    │  - Prompt assembly     │
+                    └──────────────┬─────────┘
                                    │
                  ┌─────────────────┼─────────────────┐
                  │                 │                 │
-         ┌───────▼────────┐  ┌────▼────────┐  ┌───▼─────────┐
-         │  Vector Store   │  │  vLLM API   │  │ Prometheus  │
-         │ (Qdrant/pgvector)│  │(embedding+  │  │  Metrics    │
+         ┌───────▼─────────┐  ┌────▼────────┐  ┌───▼─────────┐
+         │  Vector Store   │  │  vLLM API   │  │  Prometheus │
+         │(Qdrant/pgvector)│  │(embedding+  │  │   Metrics   │
          │                 │  │ generation) │  │             │
          └─────────────────┘  └─────────────┘  └─────────────┘
                  │                 │                 │
          ┌───────▼────────────────▼──────────────────▼────────┐
          │  Ingestion Pipeline (scheduled, batch)             │
-         │  - Chunk project README, guides, manifests          │
-         │  - Embed chunks + store vectors + metadata          │
-         │  - Index prometheus query results (cost, latency)   │
+         │  - Chunk project README, guides, manifests         │
+         │  - Embed chunks + store vectors + metadata         │
+         │  - Index prometheus query results (cost, latency)  │
          └────────────────────────────────────────────────────┘
 ```
 
