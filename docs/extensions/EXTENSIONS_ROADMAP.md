@@ -161,21 +161,21 @@ README.md                              # Add link to EXTENSIONS_ROADMAP.md
 ## Success Criteria for Each Phase
 
 ### Phase A (MCP)
-- ✅ MCP server responds to `query_prometheus` and `get_gpu_metrics` over stdio or HTTP
-- ✅ End-to-end test via Claude Code CLI
-- ✅ README + MCP schema documentation in repo
+- MCP server responds to `query_prometheus` and `get_gpu_metrics` over stdio or HTTP
+- End-to-end test via Claude Code CLI
+- README + MCP schema documentation in repo
 
 ### Phase B (RAG)
-- ✅ 500+ chunks ingested into Qdrant (from README + guides + manifests)
-- ✅ Retrieval precision ≥ 70% on 10–15 golden QA pairs
-- ✅ Generation faithfulness ≥ 65% (answer matches context, no hallucinations)
-- ✅ Query latency ≤ 2 seconds (embedding + retrieval + generation)
-- ✅ Cost breakdown in docs (tokens/query, cost/query)
+- 500+ chunks ingested into Qdrant (from README + guides + manifests)
+- Retrieval precision ≥ 70% on 10–15 golden QA pairs
+- Generation faithfulness ≥ 65% (answer matches context, no hallucinations)
+- Query latency ≤ 2 seconds (embedding + retrieval + generation)
+- Cost breakdown in docs (tokens/query, cost/query)
 
 ### Phase C (Evaluation)
-- ✅ CI workflow runs RAGAS test suite on every commit
-- ✅ Dashboard showing precision, faithfulness, latency, cost trends
-- ✅ Documented tradeoffs (speed vs. quality vs. cost)
+- CI workflow runs RAGAS test suite on every commit
+- Dashboard showing precision, faithfulness, latency, cost trends
+- Documented tradeoffs (speed vs. quality vs. cost)
 
 ---
 
@@ -188,7 +188,7 @@ README.md                              # Add link to EXTENSIONS_ROADMAP.md
 2. Week 6–12: Cloud deployment (EKS) + cost optimization
 3. Extensions: MCP for obsevability + RAG for documentation + evaluation for rigor
 
-**Why It Works**: You're not just showing how to run vLLM — you're showing how to build a **platform** that serves models, retrieves context, and measures quality. That's what AI Platform Engineers do.
+**Why It Works**: it's not just showing how to run vLLM — it's showing how to build a **platform** that serves models, retrieves context, and measures quality. That's typically an AI Platform Engineers work.
 
 ---
 
