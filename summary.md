@@ -4,7 +4,7 @@ Production-grade LLM serving on Kubernetes for enterprise environments — vLLM 
 
 Production-grade LLM serving platform on Kubernetes — vLLM inference, GPU autoscaling with Karpenter, security hardening, full observability (Prometheus, DCGM, Grafana) and cost tracking. 
 
-Built on Ministral 3 (Mistral AI) for sovereignty and solidarity to the french ecosystem.
+Built on Mistral 7B Instruct v0.1 AWQ (Mistral AI) for sovereignty and solidarity to the french ecosystem.
 
 Documented end-to-end by a senior infrastructure DevOps / SysOps.
 
@@ -17,9 +17,9 @@ Extensions: RAG + MCP + Evaluation (separate sessions, post-Week-5)
 
 ## Roadmap
 
-- [V] Week 1: local vLLM inference working (Mistral 7B AWQ Marlin on NVIDIA RTX 4060)
+- [x] Week 1: local vLLM inference working (Mistral 7B AWQ Marlin on NVIDIA RTX 4060)
 - [x] Week 2: containerized vLLM, OpenAI-compatible API tested
-- [-] Week 3-4: Kubernetes deployment (kind), basic monitoring
+- [ ] Week 3-4: Kubernetes deployment (kind), basic monitoring (in progress)
 - [ ] Week 5-6: migration to EKS with GPU nodes (g5.xlarge), Karpenter
 - [ ] Week 7-8: KEDA autoscaling on queue depth, load testing
 - [ ] Week 9-10: full observability (Prometheus, DCGM, Grafana dashboards)

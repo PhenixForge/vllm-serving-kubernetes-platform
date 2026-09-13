@@ -80,7 +80,7 @@ After the core **12-week roadmap (Weeks 1–5 on local k8s + Weeks 6–12 on AWS
 | Phase | Sessions | Hours | Depends On | Deliverables |
 |-------|----------|-------|-----------|--------------|
 | **MCP** | 1 | 2–3 | Week 4 (Prometheus) | MCP server code, README, demo via Claude Code CLI |
-| **RAG** | 3 | 7–9 | MCP (optional), Week 1 (vLLM) | Chunking pipeline, Qdrant + pgvector comparison, YAML manifests, rag-strategy.md |
+| **RAG** | 3 | 7–9 | MCP (optional), Week 1 (vLLM) | Chunking pipeline, Qdrant + pgvector comparison, YAML manifests, RAG-strategy.md |
 | **Evaluation** | 1–2 | 2–3 | RAG | Test suite, RAGAS results, cost breakdown |
 
 **Total Additional Work**: ~11–15 hours beyond the core 12-week roadmap, spread across 5–6 independent sessions.
@@ -115,8 +115,8 @@ docs/
 ├── ...
 ├── week-05-security.md
 ├── extensions/
-│   ├── mcp-server.md                 # Phase A
-│   ├── rag-strategy.md               # Phase B (detailed architecture)
+│   ├── MCP-server.md                 # Phase A
+│   ├── RAG-strategy.md               # Phase B (detailed architecture)
 │   └── evaluation-framework.md       # Phase C
 └── EXTENSIONS_ROADMAP.md             # This file
 
