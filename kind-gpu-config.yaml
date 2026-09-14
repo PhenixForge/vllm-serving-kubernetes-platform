@@ -1,0 +1,24 @@
+# Config kind avec passthrough GPU manuel (host driver 610.57.04, RTX 4060).
+# Voir docs/week-03-notes.md pour le contexte complet et pourquoi ce montage
+# manuel est nécessaire (kind ne relaie pas le mécanisme CDI de podman vers
+# ses conteneurs "nœuds").
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraMounts:
+    - hostPath: /dev/nvidia0
+      containerPath: /dev/nvidia0
+    - hostPath: /dev/nvidiactl
+      containerPath: /dev/nvidiactl
+    - hostPath: /dev/nvidia-uvm
+      containerPath: /dev/nvidia-uvm
+    - hostPath: /dev/nvidia-uvm-tools
+      containerPath: /dev/nvidia-uvm-tools
+    # Bibliothèques userspace du driver host (libcuda.so.1, libnvidia-ml.so.1)
+    # + nvidia-smi, renommées/regroupées dans un dossier de stage — voir
+    # "Étape 1bis" de docs/week-03-notes.md. Point de montage neutre
+    # (/opt/nvidia-libs) pour ne pas écraser les libs système du nœud.
+    - hostPath: /home/revan/.cache/kind-nvidia-libs
+      containerPath: /opt/nvidia-libs
+      readOnly: true
