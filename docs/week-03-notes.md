@@ -94,104 +94,119 @@ Le problème est que **kind ne relaie pas ce mécanisme CDI vers les conteneurs 
 
 ## Procédure : GPU passthrough dans kind + NVIDIA k8s-device-plugin
 
-> ⚠️ **Non encore validée end-to-end sur cette machine.** C'est la démarche standard documentée par NVIDIA/communauté pour kind (historiquement écrite pour le provider Docker). Le provider podman de kind est expérimental et cette combinaison précise (podman + CDI + kind) n'a pas de recette officielle garantie — à tester et ajuster. Documentée ici pour être reproductible, pas comme un résultat déjà obtenu.
+> ✅ **Validée end-to-end le 2026-09-14** — inférence réelle sur la RTX 4060 confirmée par un appel `/v1/completions` réussi depuis un pod kind (voir résultat en bas de section). La recherche initiale supposait que le trio CDI + podman + kind gérerait le gros du travail automatiquement ; en pratique il a fallu tout reproduire à la main (devices **et** bibliothèques driver **et** sur le pod applicatif, pas seulement sur le device-plugin) car ce cluster n'a pas de `nvidia-container-runtime`. Détails exacts ci-dessous.
 
-### Étape 1 — Recréer le cluster avec les device nodes GPU montés
+### Étape 1 — Recréer le cluster avec les device nodes GPU + libs driver montés
 
-Les conteneurs de nœuds kind tournent en `--privileged` : un simple bind-mount des fichiers de device NVIDIA suffit à leur donner l'accès matériel (pas besoin que kind comprenne CDI lui-même). Recréer le cluster avec une config qui monte les devices :
+Les conteneurs de nœuds kind tournent privilégiés : un bind-mount des fichiers de device NVIDIA suffit à leur donner l'accès matériel. Il faut **aussi** monter les bibliothèques userspace du driver (`libcuda.so.1`, `libnvidia-ml.so.1`) quelque part dans le nœud — sans `nvidia-container-runtime` pour les injecter automatiquement, il n'y a pas d'autre source pour ces `.so` à l'intérieur des conteneurs.
 
-```yaml
-# kind-gpu-config.yaml
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  extraMounts:
-    - hostPath: /dev/nvidia0
-      containerPath: /dev/nvidia0
-    - hostPath: /dev/nvidiactl
-      containerPath: /dev/nvidiactl
-    - hostPath: /dev/nvidia-uvm
-      containerPath: /dev/nvidia-uvm
-    - hostPath: /dev/nvidia-uvm-tools
-      containerPath: /dev/nvidia-uvm-tools
-    # bibliothèques driver userspace (nécessaires à libnvidia-ml.so pour le device plugin)
-    - hostPath: /usr/lib64/libnvidia-ml.so.610.57.04
-      containerPath: /usr/lib64/libnvidia-ml.so.1
-      readOnly: true
+Config utilisée, commitée dans le repo : [`kind-gpu-config.yaml`](../kind-gpu-config.yaml).
+
+Préparer d'abord un dossier de stage avec les bibliothèques et `nvidia-smi` (noms `.so.1` exacts, pas de symlink relatif qui pourrait casser au montage) :
+
+```bash
+mkdir -p ~/.cache/kind-nvidia-libs
+cp -L /usr/lib64/libcuda.so.<VERSION> ~/.cache/kind-nvidia-libs/libcuda.so.1
+cp -L /usr/lib64/libnvidia-ml.so.<VERSION> ~/.cache/kind-nvidia-libs/libnvidia-ml.so.1
+cp -L /usr/bin/nvidia-smi ~/.cache/kind-nvidia-libs/nvidia-smi
+chmod +x ~/.cache/kind-nvidia-libs/nvidia-smi
+# <VERSION> = nvidia-smi --query-gpu=driver_version --format=csv,noheader (610.57.04 au moment du test)
 ```
+
+`kind-gpu-config.yaml` monte ces devices + ce dossier (`/opt/nvidia-libs`, point neutre pour ne pas écraser les libs système du nœud) :
 
 ```bash
 # Détruire l'ancien cluster (sans GPU) et en recréer un avec cette config
+# ⚠️ Commande destructrice — l'utilisateur la lance lui-même, jamais l'assistant.
 KIND_EXPERIMENTAL_PROVIDER=podman kind delete cluster --name vllm-cluster
 KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name vllm-cluster --config kind-gpu-config.yaml
 ```
 
-**Attention** : `kind delete cluster` supprime l'état actuel du cluster (namespaces, workloads de test). À faire consciemment, pas par réflexe — vérifier avant qu'il n'y a rien à préserver dedans.
-
-Adapter la version `610.57.04` du nom de fichier `libnvidia-ml.so.*` si le driver a été mis à jour depuis (`nvidia-smi --query-gpu=driver_version --format=csv,noheader` pour la valeur courante).
-
 ### Étape 2 — Vérifier l'accès GPU depuis l'intérieur du nœud
 
 ```bash
-podman exec -it vllm-cluster-control-plane ls -la /dev/nvidia*
-# doit lister les mêmes device nodes que sur le host
+podman exec vllm-cluster-control-plane ls -la /dev/nvidia* /opt/nvidia-libs
+podman exec -e LD_LIBRARY_PATH=/opt/nvidia-libs vllm-cluster-control-plane /opt/nvidia-libs/nvidia-smi -L
+# doit afficher : GPU 0: NVIDIA GeForce RTX 4060 (UUID: ...)
 ```
 
-### Étape 3 — Déployer le NVIDIA k8s-device-plugin
+Confirmé fonctionnel avant même de toucher à Kubernetes — si ça échoue ici, inutile d'aller plus loin, le problème est dans le montage kind, pas dans k8s.
 
-Utiliser une version taguée (pas `main`) pour rester reproductible :
+### Étape 3 — Déployer le NVIDIA k8s-device-plugin (patché)
+
+Le manifeste officiel (`nvidia-device-plugin.yml` v0.14.5) suffit à faire apparaître `nvidia.com/gpu` dans les ressources du nœud, **mais** son pod doit lui aussi accéder aux devices + `libnvidia-ml.so` pour interroger NVML — mêmes montages manuels que l'étape 1, plus `securityContext.privileged: true` (pas de `nvidia-container-runtime` pour gérer les règles cgroup automatiquement) :
+
+```yaml
+# Ajouts par rapport au manifeste officiel NVIDIA/k8s-device-plugin v0.14.5 :
+env:
+  - name: LD_LIBRARY_PATH
+    value: /opt/nvidia-libs
+securityContext:
+  privileged: true
+volumeMounts:
+  - {name: nvidia-libs, mountPath: /opt/nvidia-libs, readOnly: true}
+  - {name: dev-nvidia, mountPath: /dev/nvidia0}
+  - {name: dev-nvidiactl, mountPath: /dev/nvidiactl}
+  - {name: dev-nvidia-uvm, mountPath: /dev/nvidia-uvm}
+  - {name: dev-nvidia-uvm-tools, mountPath: /dev/nvidia-uvm-tools}
+volumes:
+  - {name: nvidia-libs, hostPath: {path: /opt/nvidia-libs}}
+  - {name: dev-nvidia, hostPath: {path: /dev/nvidia0}}
+  - {name: dev-nvidiactl, hostPath: {path: /dev/nvidiactl}}
+  - {name: dev-nvidia-uvm, hostPath: {path: /dev/nvidia-uvm}}
+  - {name: dev-nvidia-uvm-tools, hostPath: {path: /dev/nvidia-uvm-tools}}
+```
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.5/nvidia-device-plugin.yml
-kubectl get pods -n kube-system | grep nvidia-device-plugin
+kubectl apply -f nvidia-device-plugin-patched.yml
+kubectl logs -n kube-system -l name=nvidia-device-plugin-ds
+# doit contenir : "Detected NVML platform: found NVML library"
 ```
 
 ### Étape 4 — Vérifier que le nœud annonce bien la ressource GPU
 
 ```bash
-kubectl describe node vllm-cluster-control-plane | grep -A5 "Allocatable:"
-# doit maintenant contenir : nvidia.com/gpu: 1
+kubectl describe node vllm-cluster-control-plane | grep -A6 "Allocatable:"
+# nvidia.com/gpu: 1   ← confirmé
 ```
 
-Si `nvidia.com/gpu` n'apparaît toujours pas : regarder les logs du pod `nvidia-device-plugin` (`kubectl logs -n kube-system <pod>`) — la cause la plus probable est que `libnvidia-ml.so` n'est pas trouvée dans le nœud (chemin/version à ajuster dans `extraMounts`).
+### Étape 5 — Répéter le même montage manuel sur le Deployment applicatif
 
-### Étape 5 — Réactiver la requête GPU dans le Deployment
+**Point non anticipé lors de la première rédaction de cette procédure** : le device plugin officiel utilise la stratégie `deviceListStrategy: envvar` — il se contente de poser `NVIDIA_VISIBLE_DEVICES=<uuid>` sur le pod qui demande `nvidia.com/gpu`, en supposant que `nvidia-container-runtime` interceptera cette variable pour injecter devices + libs. Sans ce runtime, la variable ne fait rien : **chaque pod applicatif qui a besoin du GPU doit reproduire exactement les mêmes montages manuels que l'étape 3** (devices + `/opt/nvidia-libs` + `LD_LIBRARY_PATH` + `privileged: true`), en plus de la requête `resources.limits."nvidia.com/gpu"` normale. C'est fait dans `kubernetes/deployment.yaml` (section `vllm` container).
 
-Une fois l'étape 4 validée, décommenter les lignes `nvidia.com/gpu` dans `kubernetes/deployment.yaml` (voir section suivante) et ré-appliquer.
+### Résultat du test end-to-end (2026-09-14)
 
----
+Après les étapes 1-5, le pod `vllm-server` charge le modèle sur GPU (logs : `device_config=cuda`, poids chargés, CUDA graphs compilés) et répond à une vraie requête d'inférence via le Service :
 
-## Solution temporaire adoptée (2026-09-14) — pas de GPU request
-
-En attendant la procédure ci-dessus, les lignes `nvidia.com/gpu` de `kubernetes/deployment.yaml` sont **commentées** (pas supprimées) pour permettre au pod d'être planifié et de valider le reste du pipeline (Service, PVC binding, Ingress, KEDA) sans bloquer sur le scheduling.
-
-Conséquence assumée : le conteneur vLLM n'aura pas d'accès GPU réel dans cet état — il est probable qu'il crash-loop à l'initialisation CUDA. C'est acceptable pour cette étape : l'objectif est de valider la tuyauterie Kubernetes, pas l'inférence, tant que le passthrough GPU n'est pas en place.
-
-**Piste retenue pour la semaine 4** : au lieu de finir la procédure GPU-dans-kind maintenant, on progresse en parallèle sur les deux fronts qui convergent en semaine 4 — l'observabilité (Prometheus/Grafana, dépendance déjà notée pour KEDA) et le GPU passthrough kind décrit ci-dessus. Remettre `nvidia.com/gpu` en clair dans `deployment.yaml` dès que l'étape 4 de la procédure GPU est validée.
-
-**Résultat observé (2026-09-14) avec ce workaround** : le pod se planifie et son image (`localhost/vllm-mistral-7b-v01:latest`, chargée via `podman save` + `kind load image-archive` — `kind load docker-image` a échoué avec le provider podman, voir note ci-dessous) démarre bien, mais crash immédiatement en `CrashLoopBackOff` :
-
-```
-RuntimeError: Failed to infer device type, please set the environment variable
-`VLLM_LOGGING_LEVEL=DEBUG` to turn on verbose logging to help debug the issue.
+```bash
+$ curl -s -X POST http://localhost:18000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d '{"model": "TheBloke/Mistral-7B-Instruct-v0.1-AWQ", "prompt": "Kubernetes is", "max_tokens": 20}'
+{"choices":[{"text":" a powerful platform automation tool that allows you to deploy, scale, and manage containerized applications in", ...}], "usage": {"prompt_tokens":4,"completion_tokens":20,...}}
 ```
 
-Attendu et sans surprise : vLLM ne trouve aucun GPU. Ça confirme que la tuyauterie Kubernetes (scheduling, PVC binding, ConfigMap, Service) fonctionne ; seule l'inférence réelle attend le passthrough GPU.
+**Écueil rencontré en cours de route, sans rapport avec le GPU passthrough** : premier essai en `CrashLoopBackOff` avec `ValueError: No available memory for the cache blocks` — le budget `--gpu-memory-utilization=0.6` (figé dans l'image, RTX 4060 8 Go déjà partagée avec le bureau, ~1.9 Go utilisés hors vLLM) ne laisse plus de marge pour le KV cache une fois le profiling mémoire des CUDA graphs pris en compte (comportement par défaut depuis vLLM v0.21). Fix sans rebuild d'image : ajouter `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"` dans `kubernetes/configmap.yaml`.
+
+`/v1/chat/completions` renvoie une erreur 400 séparée ("no chat template") — problème de configuration applicative du tokenizer, sans lien avec l'infra GPU/k8s, laissé de côté pour l'instant (`/v1/completions` suffit à valider le passthrough).
 
 **Note technique — charger une image locale podman dans kind** : `kind load docker-image` échoue avec le provider podman (`"image not present locally"`, même si `podman images` la montre). La méthode qui fonctionne :
 
 ```bash
-podman save -o /home/<user>/.cache/kind-image-load/<image>.tar localhost/<image>:latest
-KIND_EXPERIMENTAL_PROVIDER=podman kind load image-archive /home/<user>/.cache/kind-image-load/<image>.tar --name vllm-cluster
+podman save -o ~/.cache/kind-image-load/<image>.tar localhost/<image>:latest
+KIND_EXPERIMENTAL_PROVIDER=podman kind load image-archive ~/.cache/kind-image-load/<image>.tar --name vllm-cluster
+rm ~/.cache/kind-image-load/<image>.tar
 ```
 
-⚠️ L'image fait ~23 Go : ne pas passer par `/tmp` s'il est en tmpfs (RAM) — `df -h /tmp` avant, sinon `disk quota exceeded` en cours de `podman save`. Écrire dans un dossier sous `/home` (ex. `~/.cache/kind-image-load/`), et supprimer le tar après le `kind load` (pas besoin de le garder).
+⚠️ L'image fait ~23 Go : ne pas passer par `/tmp` s'il est en tmpfs (RAM) — `df -h /tmp` avant, sinon `disk quota exceeded` en cours de `podman save`. Écrire dans un dossier sous `/home` (ex. `~/.cache/kind-image-load/`).
+
+**Rappel important** : recréer le cluster (`kind delete` + `kind create`) efface tout son état (namespaces, PVC, pods). Après l'étape 1, il faut réappliquer `namespace vllm` + `pvc.yaml` + `configmap.yaml` + `service.yaml` + `deployment.yaml`, et **recharger l'image** (`kind load image-archive`) puisque le nouveau nœud ne l'a jamais vue.
 
 ---
 
 ## Autres points ouverts semaine 3 (rappel)
 
+- ✅ GPU passthrough — fait (voir ci-dessus), `nvidia.com/gpu` réactivé dans `kubernetes/deployment.yaml`.
 - FQDN `vllm.local` dans `kubernetes/ingress.yaml` : pas besoin de Route 53 tant qu'on reste sur kind local — juste une entrée `/etc/hosts`. Route 53 ne devient pertinent qu'à la migration EKS (semaine 5-6).
-- Dépendance KEDA → Prometheus (`kubernetes/keda-scaledobject.yaml`) : décision prise d'attendre la stack Prometheus de la semaine 4 plutôt que déployer un Prometheus minimal jetable maintenant.
+- Dépendance KEDA → Prometheus (`kubernetes/keda-scaledobject.yaml`) : décision prise d'attendre la stack Prometheus de la semaine 4 plutôt que déployer un Prometheus minimal jetable maintenant. KEDA lui-même (le contrôleur, via Helm) n'est pas encore installé dans le cluster.
 - Pas de contrôleur Ingress (`ingress-nginx`) installé sur ce cluster kind — à faire avant de pouvoir tester le streaming via `curl -N http://vllm.local/...`.
+- Erreur 400 sur `/v1/chat/completions` (pas de chat template par défaut pour ce tokenizer) — problème applicatif distinct, pas bloquant pour la validation infra.

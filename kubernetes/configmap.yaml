@@ -9,3 +9,9 @@ data:
   HF_HOME: "/root/.cache/huggingface"
   VLLM_LOGGING_LEVEL: "INFO"
   PYTHONUNBUFFERED: "1"
+  # RTX 4060 8Go déjà partagée avec le bureau (~1.9 Go utilisés hors vLLM) :
+  # avec --gpu-memory-utilization=0.6 figé dans l'image, le profiling mémoire
+  # des CUDA graphs (par défaut depuis v0.21) fait passer le KV cache en
+  # négatif ("No available memory for the cache blocks"). Désactivé plutôt que
+  # de reconstruire l'image — voir docs/week-03-notes.md.
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"

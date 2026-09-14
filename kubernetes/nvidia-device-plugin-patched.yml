@@ -1,0 +1,73 @@
+# Dérivé de https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.5/nvidia-device-plugin.yml
+# Patché pour ce cluster kind sans nvidia-container-runtime : montages manuels
+# des devices NVIDIA + libs driver (/opt/nvidia-libs, voir docs/week-03-notes.md
+# et kind-gpu-config.yaml) + privileged, puisque le plugin ne peut pas compter
+# sur un runtime container GPU-aware pour y accéder lui-même.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-device-plugin-daemonset
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: nvidia-device-plugin-ds
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: nvidia-device-plugin-ds
+    spec:
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      priorityClassName: "system-node-critical"
+      containers:
+      - image: nvcr.io/nvidia/k8s-device-plugin:v0.14.5
+        name: nvidia-device-plugin-ctr
+        env:
+          - name: FAIL_ON_INIT_ERROR
+            value: "false"
+          - name: LD_LIBRARY_PATH
+            value: /opt/nvidia-libs
+        securityContext:
+          # privileged requis : pas de nvidia-container-runtime pour gérer les
+          # règles cgroup device automatiquement (setup manuel kind, voir
+          # docs/week-03-notes.md) — le plugin doit pouvoir ouvrir /dev/nvidia*
+          # lui-même pour interroger NVML.
+          privileged: true
+        volumeMounts:
+        - name: device-plugin
+          mountPath: /var/lib/kubelet/device-plugins
+        - name: nvidia-libs
+          mountPath: /opt/nvidia-libs
+          readOnly: true
+        - name: dev-nvidia
+          mountPath: /dev/nvidia0
+        - name: dev-nvidiactl
+          mountPath: /dev/nvidiactl
+        - name: dev-nvidia-uvm
+          mountPath: /dev/nvidia-uvm
+        - name: dev-nvidia-uvm-tools
+          mountPath: /dev/nvidia-uvm-tools
+      volumes:
+      - name: device-plugin
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: nvidia-libs
+        hostPath:
+          path: /opt/nvidia-libs
+      - name: dev-nvidia
+        hostPath:
+          path: /dev/nvidia0
+      - name: dev-nvidiactl
+        hostPath:
+          path: /dev/nvidiactl
+      - name: dev-nvidia-uvm
+        hostPath:
+          path: /dev/nvidia-uvm
+      - name: dev-nvidia-uvm-tools
+        hostPath:
+          path: /dev/nvidia-uvm-tools

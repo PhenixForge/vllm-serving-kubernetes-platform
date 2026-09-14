@@ -22,24 +22,31 @@ spec:
       - name: vllm
         image: localhost/vllm-mistral-7b-v01:latest
         imagePullPolicy: Never # image chargée localement dans kind, jamais pull depuis un registre
+        # privileged + montages /dev/nvidia*+libs : le device plugin annonce
+        # nvidia.com/gpu mais utilise la stratégie "envvar" (NVIDIA_VISIBLE_DEVICES),
+        # qui suppose nvidia-container-runtime pour l'injection réelle des devices/libs.
+        # Ce cluster n'en a pas (setup manuel, voir docs/week-03-notes.md) : on
+        # reproduit l'injection à la main tant que ce n'est pas en place.
+        securityContext:
+          privileged: true
         ports:
         - name: http
           containerPort: 8000
         envFrom:
         - configMapRef:
             name: vllm-config
+        env:
+        - name: LD_LIBRARY_PATH
+          value: /opt/nvidia-libs
         resources:
-          # nvidia.com/gpu désactivé temporairement : ce cluster kind n'a pas encore
-          # le passthrough GPU + device plugin (voir docs/week-03-notes.md). À
-          # réactiver dès que cette procédure est validée (cible semaine 4).
           requests:
             cpu: "2"
             memory: "8Gi"
-            # nvidia.com/gpu: "1"
+            nvidia.com/gpu: "1"
           limits:
             cpu: "4"
             memory: "12Gi"
-            # nvidia.com/gpu: "1"
+            nvidia.com/gpu: "1"
         readinessProbe:
           httpGet:
             path: /health
@@ -57,7 +64,33 @@ spec:
         volumeMounts:
         - mountPath: /root/.cache/huggingface
           name: model-cache
+        - mountPath: /opt/nvidia-libs
+          name: nvidia-libs
+          readOnly: true
+        - mountPath: /dev/nvidia0
+          name: dev-nvidia
+        - mountPath: /dev/nvidiactl
+          name: dev-nvidiactl
+        - mountPath: /dev/nvidia-uvm
+          name: dev-nvidia-uvm
+        - mountPath: /dev/nvidia-uvm-tools
+          name: dev-nvidia-uvm-tools
       volumes:
       - name: model-cache
         persistentVolumeClaim:
           claimName: vllm-model-cache
+      - name: nvidia-libs
+        hostPath:
+          path: /opt/nvidia-libs
+      - name: dev-nvidia
+        hostPath:
+          path: /dev/nvidia0
+      - name: dev-nvidiactl
+        hostPath:
+          path: /dev/nvidiactl
+      - name: dev-nvidia-uvm
+        hostPath:
+          path: /dev/nvidia-uvm
+      - name: dev-nvidia-uvm-tools
+        hostPath:
+          path: /dev/nvidia-uvm-tools
