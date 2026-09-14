@@ -36,6 +36,19 @@ Lister les clusters kind connus par l'outil (utile si le nom est oublié) :
 KIND_EXPERIMENTAL_PROVIDER=podman kind get clusters
 ```
 
+### Couper le cluster (sans le détruire)
+
+Pour libérer les ressources (CPU/RAM/GPU) quand on ne travaille pas dessus, sans perdre l'état (namespaces, PVC, manifestes appliqués) :
+
+```bash
+podman stop vllm-cluster-control-plane
+podman ps -a --filter name=vllm-cluster   # doit passer en "Exited"
+```
+
+Pour reprendre ensuite, revenir aux étapes 2-4 ci-dessus (`podman start` + `kind export kubeconfig` + `kubectl get nodes`).
+
+⚠️ Ne pas confondre avec `kind delete cluster` (détruit tout l'état, voir plus bas) — `podman stop` est réversible et sans risque, à utiliser librement entre deux sessions.
+
 ---
 
 ## Déployer les manifestes semaine 3
