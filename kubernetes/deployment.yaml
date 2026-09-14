@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: vllm
-        image: vllm-serving:latest
+        image: localhost/vllm-mistral-7b-v01:latest
         imagePullPolicy: Never # image chargée localement dans kind, jamais pull depuis un registre
         ports:
         - name: http
@@ -29,14 +29,17 @@ spec:
         - configMapRef:
             name: vllm-config
         resources:
+          # nvidia.com/gpu désactivé temporairement : ce cluster kind n'a pas encore
+          # le passthrough GPU + device plugin (voir docs/week-03-notes.md). À
+          # réactiver dès que cette procédure est validée (cible semaine 4).
           requests:
             cpu: "2"
             memory: "8Gi"
-            nvidia.com/gpu: "1"
+            # nvidia.com/gpu: "1"
           limits:
             cpu: "4"
             memory: "12Gi"
-            nvidia.com/gpu: "1"
+            # nvidia.com/gpu: "1"
         readinessProbe:
           httpGet:
             path: /health
