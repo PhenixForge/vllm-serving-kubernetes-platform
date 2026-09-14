@@ -1,19 +1,56 @@
-# Monter le volume dans le Pod
-# et définissez la variable d'environnement HF_HOME
+# Déploiement vLLM sur kind (local). Modèle et flags vLLM déjà figés dans l'image
+# custom (voir container/Containerfile) ; buildée puis chargée dans kind via
+# scripts/podman.sh + `kind load docker-image vllm-serving:latest`.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vllm-server
   namespace: vllm
+  labels:
+    app: vllm-server
 spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-server
   template:
+    metadata:
+      labels:
+        app: vllm-server
     spec:
       containers:
       - name: vllm
-        image: vllm/vllm-openai:latest
-        env:
-        - name: HF_HOME
-          value: /root/.cache/huggingface
+        image: vllm-serving:latest
+        imagePullPolicy: Never # image chargée localement dans kind, jamais pull depuis un registre
+        ports:
+        - name: http
+          containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: vllm-config
+        resources:
+          requests:
+            cpu: "2"
+            memory: "8Gi"
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: "12Gi"
+            nvidia.com/gpu: "1"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          failureThreshold: 3
         volumeMounts:
         - mountPath: /root/.cache/huggingface
           name: model-cache

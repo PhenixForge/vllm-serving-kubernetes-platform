@@ -1,1 +1,11 @@
-# optionnel : Pour stocker la configuration de vLLM (ex: max_model_len, gpu_memory_utilization).
+# Configuration non-sensible du serveur vLLM (le modèle et ses flags sont figés
+# dans l'image via container/Containerfile ; ceci couvre le reste du runtime).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-config
+  namespace: vllm
+data:
+  HF_HOME: "/root/.cache/huggingface"
+  VLLM_LOGGING_LEVEL: "INFO"
+  PYTHONUNBUFFERED: "1"

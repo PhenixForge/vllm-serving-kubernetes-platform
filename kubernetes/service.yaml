@@ -1,1 +1,15 @@
-# Pour exposer l’API vLLM (ClusterIP ou NodePort).
+# Service ClusterIP exposant les pods vLLM en interne au cluster (backend de l'Ingress).
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-service
+  namespace: vllm
+spec:
+  type: ClusterIP
+  selector:
+    app: vllm-server
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
