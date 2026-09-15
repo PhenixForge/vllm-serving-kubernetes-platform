@@ -1,6 +1,6 @@
 # Week 03 — Notes
 
-Cluster local : `kind` (nom `vllm-cluster`), provider **podman** (`KIND_EXPERIMENTAL_PROVIDER=podman`), créé via `kind create cluster --name vllm-cluster` (voir [week2 guide.md](../week2%20guide.md)) — pas de config GPU à la création.
+Cluster local : `kind` (nom `vllm-cluster`), provider **podman** (`KIND_EXPERIMENTAL_PROVIDER=podman`), créé via `kind create cluster --name vllm-cluster` (voir [week2 guide.md](week2%20guide.md)) — pas de config GPU à la création.
 
 ---
 
@@ -223,3 +223,82 @@ rm ~/.cache/kind-image-load/<image>.tar
 - Dépendance KEDA → Prometheus (`kubernetes/keda-scaledobject.yaml`) : décision prise d'attendre la stack Prometheus de la semaine 4 plutôt que déployer un Prometheus minimal jetable maintenant. KEDA lui-même (le contrôleur, via Helm) n'est pas encore installé dans le cluster.
 - Pas de contrôleur Ingress (`ingress-nginx`) installé sur ce cluster kind — à faire avant de pouvoir tester le streaming via `curl -N http://vllm.local/...`.
 - Erreur 400 sur `/v1/chat/completions` (pas de chat template par défaut pour ce tokenizer) — problème applicatif distinct, pas bloquant pour la validation infra.
+
+---
+
+## ✅ Validation Semaine 3 bouclée (2026-09-15)
+
+`ingress-nginx` (contrôleur) et `keda` (opérateur) ont été installés entre-temps (bundle YAML officiel, sans Helm — indisponible sur cette machine, cf. plus haut). Restait à appliquer les manifestes applicatifs et valider le streaming end-to-end.
+
+### Reprise de session : redémarrer le cluster arrêté
+
+```bash
+podman start vllm-cluster-control-plane
+export KUBECONFIG=/tmp/vllm-kubeconfig
+KIND_EXPERIMENTAL_PROVIDER=podman kind export kubeconfig --name vllm-cluster --kubeconfig "$KUBECONFIG"
+```
+
+### Bloqueur rencontré au redémarrage : `ingress-nginx` en CrashLoopBackOff permanent
+
+Après redémarrage du conteneur, `ingress-nginx-controller` tournait déjà depuis 16h avec **56 redémarrages**, `keda-operator` avec **63 redémarrages**. Logs :
+
+```
+2026/09/15 21:32:12 [alert] 49#49: pthread_create() failed (11: Resource temporarily unavailable)
+2026/09/15 21:32:12 [alert] 35#35: worker process 42 exited with fatal code 2 and cannot be respawned
+```
+
+```
+ERROR scaleclient not able to get Kubernetes version {"error": "... dial tcp 10.96.0.1:443: connect: no route to host"}
+```
+
+**Cause identifiée** : en kind, **tous** les pods du cluster (kubelet, containerd, coredns, vLLM, ingress-nginx, KEDA…) tournent à l'intérieur d'un seul conteneur podman "nœud", qui partage un **unique cgroup `pids`** :
+
+```bash
+podman inspect vllm-cluster-control-plane --format '{{.HostConfig.PidsLimit}}'   # 2048
+```
+
+vLLM (runtime CUDA multi-thread) + tous les composants système consomment une bonne part de ce budget partagé de 2048 PIDs/threads ; nginx qui tente de spawn ses worker threads se heurte par intermittence à `EAGAIN`. Même famille de problème que l'écueil inotify documenté plus haut (une limite système partagée entre trop de monde), mais sur le compteur `pids` cette fois.
+
+**Fix appliqué, à chaud, sans recréer le cluster** :
+
+```bash
+podman update --pids-limit 8192 vllm-cluster-control-plane
+kubectl delete pod -n ingress-nginx -l app.kubernetes.io/component=controller   # relance avec la nouvelle limite
+```
+
+Résultat : `ingress-nginx-controller` stable en `1/1 Running` après 2 redémarrages au lieu de crashlooper en continu. `keda-operator`/`keda-admission`/`keda-metrics-apiserver` se sont aussi stabilisés à `1/1` (leur erreur `no route to host` était liée au même redémarrage du CNI, résolue une fois le nœud stabilisé).
+
+> Si ça revient sur une prochaine recréation du cluster : soit relancer cette commande `podman update` après chaque `kind create cluster`, soit ajouter le pids-limit directement dans une future config kind si l'option existe côté containerd.
+
+**Pods `vllm-server` fantômes** : après le redémarrage, 2 anciens pods étaient bloqués en `UnexpectedAdmissionError` (`no healthy devices present` — le device-plugin GPU venait de se ré-enregistrer). Le nouveau pod créé par le ReplicaSet, lui, est reparti sain. Nettoyage :
+
+```bash
+kubectl delete pod -n vllm vllm-server-868c74994c-8c4dr vllm-server-868c74994c-hlwc9
+```
+
+### Déploiement des manifestes restants
+
+```bash
+kubectl apply -f kubernetes/ingress.yaml
+kubectl apply -f kubernetes/keda-scaledobject.yaml
+```
+
+- `ingress.yaml` : accepté avec un warning (annotation `kubernetes.io/ingress.class` dépréciée au profit de `spec.ingressClassName` — à migrer un jour, non bloquant, ingress-nginx la respecte encore).
+- `keda-scaledobject.yaml` : `ScaledObjectReady=True` côté KEDA, mais `KEDAScalerFailed` en boucle sur `prometheus-k8s.monitoring.svc.cluster.local: no such host` — **attendu**, cf. décision ci-dessus d'attendre la stack Prometheus semaine 4.
+
+### ✅ Test streaming via Ingress — validé
+
+Pas d'`extraPortMappings` 80/443 dans `kind-gpu-config.yaml` (seul 6443 est exposé côté host), donc test via `kubectl port-forward` plutôt que directement sur `vllm.local` :
+
+```bash
+kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 18080:80
+curl -N -H "Host: vllm.local" http://localhost:18080/v1/completions \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"model": "TheBloke/Mistral-7B-Instruct-v0.1-AWQ", "prompt": "Kubernetes is", "max_tokens": 15, "stream": true}'
+```
+
+Résultat : flux SSE token par token (`data: {...}` par token, terminé par `data: [DONE]`), confirmant que `proxy-buffering: off` fonctionne correctement à travers l'Ingress.
+
+> Pour un test direct sur `http://vllm.local/...` sans port-forward, il faudrait ajouter `extraPortMappings` (80→80, 443→443) dans `kind-gpu-config.yaml` — nécessite de recréer le cluster, laissé pour une prochaine session (⚠️ recréation du cluster : à lancer soi-même, pas par l'assistant).
+
+**Semaine 3 : tous les objectifs sont maintenant validés** — Ingress + streaming SSE, HPA/KEDA installé et fonctionnel (bloqué uniquement sur la donnée Prometheus, dépendance semaine 4 assumée), PVC/cache déjà en place depuis les notes précédentes.

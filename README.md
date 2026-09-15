@@ -15,11 +15,11 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 3/12 — in progress**
+**Week 4/12 — in progress**
 
 Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
-Now deploying on a local Kubernetes cluster (kind): Deployment, Service, Ingress (streaming-aware), PVC and KEDA autoscaling manifests drafted.
+Deployed on a local Kubernetes cluster (kind) with GPU passthrough: Deployment, Service, Ingress (SSE streaming validated end-to-end), PVC and KEDA autoscaling manifests applied. KEDA is wired to a Prometheus trigger not yet deployed — pending Week 4's observability stack.
 
 ---
 
@@ -133,7 +133,8 @@ graph TB
 
 - [x] **Week 1** — local vLLM inference working (Mistral 7B AWQ on RTX 4060, baseline metrics captured)
 - [x] **Week 2** — clean Containerfile, all OpenAI-compatible endpoints tested
-- [ ] **Week 3-4** — Kubernetes deployment on kind (local), Ingress + KEDA autoscaling + PVC manifests (in progress)
+- [x] **Week 3** — Kubernetes deployment on kind (local), GPU passthrough, Ingress + SSE streaming validated, KEDA autoscaler wired (Prometheus trigger pending Week 4)
+- [ ] **Week 4** — Prometheus/Grafana observability, load benchmarking (in progress)
 - [ ] **Week 5-6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling
 - [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
 - [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)

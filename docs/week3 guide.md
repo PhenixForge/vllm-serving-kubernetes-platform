@@ -28,9 +28,14 @@ Configurer un stockage partagé performant ou un système de cache réseau (ex. 
 
 ---
 
-# Reste à faire
-## Finir la configuration du LB nginx `ingress.yaml`
-Ajouter mon FQDN dedans.
+# ✅ Semaine 3 bouclée (2026-09-15)
+
+Tous les points ci-dessous ont été validés — détails complets dans [week-03-notes.md](week-03-notes.md).
+
+- `ingress.yaml` et `keda-scaledobject.yaml` appliqués au cluster.
+- Bloqueur résolu au passage : `ingress-nginx` et `keda-operator` crashloopaient (pids-limit du conteneur nœud kind à 2048, saturé par l'ensemble des pods du cluster partageant un seul cgroup) — fix `podman update --pids-limit 8192 vllm-cluster-control-plane`, sans recréer le cluster.
+- Streaming SSE testé de bout en bout à travers l'Ingress (`proxy-buffering: off` confirmé fonctionnel) — via `kubectl port-forward` en l'absence d'`extraPortMappings` 80/443 sur ce cluster kind (nécessiterait une recréation, remise à plus tard).
+- KEDA `ScaledObjectReady=True`, seul le scaler Prometheus échoue (`no such host`) — attendu, dépendance assumée sur la stack Prometheus de la semaine 4.
 
 ## Étape 3 : Auto-scaling Horizontal (HPA & KEDA)
 
@@ -49,7 +54,7 @@ helm repo update
 helm install keda kedacore/keda --namespace keda --create-namespace
 ```
 
-> Helm n'est pas installé sur cette machine (2026-09-14) — utilisé à la place le bundle YAML officiel d'une release GitHub, sans dépendance Helm : `kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.20.2/keda-2.20.2.yaml`. Détails et écueil rencontré (`couldn't initialize inotify: too many open files` — `fs.inotify.max_user_instances` trop bas, partagé entre le bureau GNOME et les conteneurs kind/podman) dans [docs/week-03-notes.md](docs/week-03-notes.md).
+> Helm n'est pas installé sur cette machine (2026-09-14) — utilisé à la place le bundle YAML officiel d'une release GitHub, sans dépendance Helm : `kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.20.2/keda-2.20.2.yaml`. Détails et écueil rencontré (`couldn't initialize inotify: too many open files` — `fs.inotify.max_user_instances` trop bas, partagé entre le bureau GNOME et les conteneurs kind/podman) dans [week-03-notes.md](week-03-notes.md).
 
 ### 3.2 Vérifier l'état dans Prometheus
 
