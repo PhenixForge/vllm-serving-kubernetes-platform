@@ -49,6 +49,8 @@ helm repo update
 helm install keda kedacore/keda --namespace keda --create-namespace
 ```
 
+> Helm n'est pas installé sur cette machine (2026-09-14) — utilisé à la place le bundle YAML officiel d'une release GitHub, sans dépendance Helm : `kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.20.2/keda-2.20.2.yaml`. Détails et écueil rencontré (`couldn't initialize inotify: too many open files` — `fs.inotify.max_user_instances` trop bas, partagé entre le bureau GNOME et les conteneurs kind/podman) dans [docs/week-03-notes.md](docs/week-03-notes.md).
+
 ### 3.2 Vérifier l'état dans Prometheus
 
 ## Validation de la Semaine 3
@@ -63,6 +65,8 @@ Déployer les configurations :
 
 ```bash
 kubectl apply -f kubernetes/pvc.yaml
+kubectl apply -f kubernetes/configmap.yaml
+kubectl apply -f kubernetes/service.yaml
 kubectl apply -f kubernetes/deployment.yaml
 kubectl apply -f kubernetes/ingress.yaml
 kubectl apply -f kubernetes/keda-scaledobject.yaml

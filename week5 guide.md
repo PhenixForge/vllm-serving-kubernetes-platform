@@ -23,6 +23,8 @@ L'objectif de cette cinquième semaine est de faire passer la plateforme d'un é
 * Appliquer le principe du moindre privilège : exécuter le conteneur vLLM sans accès `root` (`runAsNonRoot: true`, `readOnlyRootFilesystem`).
 * Désactiver l'élévation de privilèges (`allowPrivilegeEscalation: false`) et supprimer toutes les capacités Kernel superflues (`capabilities: drop: ["ALL"]`).
 
+> ⚠️ **Dette technique à résoudre ici** : `kubernetes/deployment.yaml` tourne actuellement avec `securityContext.privileged: true`, ajouté en semaine 3 pour le passthrough GPU manuel dans kind (pas de `nvidia-container-runtime` sur ce cluster — voir [docs/week-03-notes.md](docs/week-03-notes.md)). Directement à l'opposé de ce principe de moindre privilège. Sur EKS (semaine 5-6), le device plugin NVIDIA standard + Karpenter/AMI GPU géré devrait rendre `privileged: true` inutile — à vérifier et retirer plutôt que de le porter tel quel.
+
 ### **Gestion des Secrets et des Jetons Hugging Face :**
 * Sortir les jetons d'accès (ex. `HF_TOKEN` pour les modèles fermés/gated) des fichiers YAML/ConfigMaps et basculer sur des **Kubernetes Secrets** ou une intégration External Secrets Operator / Vault.
 
