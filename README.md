@@ -197,7 +197,7 @@ graph TB
 |---|---|
 | Model | Mistral 7B Instruct v0.1 AWQ (Apache 2.0) |
 | Inference server | vLLM 0.20.2 |
-| Container runtime | Podman (Fedora Silverblue 44) |
+| Container runtime | Podman (Fedora 44) |
 | Orchestration | Kubernetes — kind (local) → EKS (cloud) |
 | Node autoscaling | Karpenter |
 | Pod autoscaling | KEDA (queue depth metric) |
