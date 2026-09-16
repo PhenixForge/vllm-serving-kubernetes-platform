@@ -1,0 +1,14 @@
+# Terraform (semaine 6 — migration EKS)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfplan
+terraform/crash.log
+terraform/crash.*.log
+# Vraies valeurs (région, tags de compte, etc.) : partir de terraform.tfvars.example
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+
+# Kubeconfig généré localement (kind, ou `aws eks update-kubeconfig`)
+kubeconfig*
+*.kubeconfig

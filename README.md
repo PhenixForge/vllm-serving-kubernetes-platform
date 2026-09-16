@@ -15,7 +15,7 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 6/12 — starting**
+**Week 6/12 — in progress**
 
 Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
@@ -24,6 +24,8 @@ Deployed on a local Kubernetes cluster (kind) with GPU passthrough: Deployment, 
 Full observability stack live: Prometheus + DCGM Exporter (GPU metrics) + Grafana dashboard. KEDA's Prometheus trigger is now healthy end-to-end (`HPAActive=True`). Load benchmarking swept up to 128 concurrent requests with zero failures — vLLM's scheduler throttles admission under KV cache pressure (99.5% usage observed) instead of OOMing.
 
 Security hardening done: `vllm-server` runs non-root (UID 1000), no capabilities, read-only root filesystem, no `privileged`. NetworkPolicies written and applied (inert on this cluster's CNI — no policy engine, documented). Ingress locked down with Basic Auth + rate limiting.
+
+EKS migration: Terraform written for VPC + EKS + Karpenter-managed GPU node pool (see [`terraform/`](terraform/)) — validated (`init`/`validate`/`plan` up to the expected missing-credentials wall) but **not applied**. No AWS credentials configured yet, and standing up real GPU nodes costs real money — that step is deliberately left for a deployer with an AWS account and budget sign-off, not run automatically.
 
 ---
 
@@ -140,7 +142,7 @@ graph TB
 - [x] **Week 3** — Kubernetes deployment on kind (local), GPU passthrough, Ingress + SSE streaming validated, KEDA autoscaler wired (Prometheus trigger pending Week 4)
 - [x] **Week 4** — Prometheus/DCGM/Grafana observability, load benchmarking (128 concurrent requests, 0 failures), GPU resource management (nodeAffinity/tolerations)
 - [x] **Week 5** — security hardening: NetworkPolicies (written, inert on kindnet — no policy engine), non-root/read-only SecurityContext, secrets review (none needed — public model), graceful shutdown, Ingress Basic Auth + rate limiting
-- [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling
+- [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling. Terraform written and validated (`terraform/`); not yet applied (no AWS credentials, real cost — deliberately left for manual apply)
 - [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
 - [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)
 - [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article

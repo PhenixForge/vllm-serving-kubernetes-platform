@@ -1,0 +1,7 @@
+# Copier en terraform.tfvars (gitignored) et ajuster. Toutes ces valeurs ont
+# un défaut raisonnable dans variables.tf — ce fichier n'est nécessaire que
+# pour les surcharger.
+
+# region       = "eu-west-3"
+# cluster_name = "vllm-serving"
+# gpu_instance_type = "g5.xlarge"
