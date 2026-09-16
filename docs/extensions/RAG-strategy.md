@@ -277,7 +277,7 @@ def test_generation_faithfulness():
 
 ## Timeline & Sequencing
 
-### Phase Ordering (After Weeks 1–5 Core Complete)
+### Phase Ordering (After Weeks 1–6 Core Complete)
 
 **Session N+1: RAG Foundation** (3–4 hours)
 1. Set up Qdrant container (Helm chart on local kind cluster)

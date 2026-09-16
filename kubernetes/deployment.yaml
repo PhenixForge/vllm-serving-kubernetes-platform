@@ -29,7 +29,7 @@ spec:
       # nodeAffinity est vérifiable (le nœud est labellisé nvidia.com/gpu.present=true
       # ci-dessous) mais n'isole rien puisqu'il n'y a qu'un seul nœud. La
       # toleration, elle, ne fait rien tant qu'aucun taint ne matche — posée
-      # par anticipation de la migration EKS (semaines 5-6), où les node groups
+      # par anticipation de la migration EKS (semaine 6), où les node groups
       # GPU (g5.xlarge, via Karpenter) porteront réellement ce taint pour
       # empêcher des pods non-GPU de s'y faire scheduler.
       affinity:
@@ -44,6 +44,14 @@ spec:
       - key: nvidia.com/gpu
         operator: Exists
         effect: NoSchedule
+      # fsGroup 1000 : aligne l'ownership du PVC (créé par un pod tournant en
+      # root avant la semaine 5) avec le nouvel utilisateur non-root du conteneur.
+      securityContext:
+        fsGroup: 1000
+      # preStop (5s, cf. container) + budget pour qu'une requête en cours
+      # (jusqu'à 200 tokens, généralement <2s à faible charge d'après le
+      # benchmark semaine 4) finisse avant le SIGKILL.
+      terminationGracePeriodSeconds: 30
       containers:
       - name: vllm
         image: localhost/vllm-mistral-7b-v01:latest
@@ -61,10 +69,19 @@ spec:
         # ("error creating device nodes"). Découvert sur dcgm-exporter d'abord
         # (cf. docs/week-04-notes.md), puis reproduit ici au premier
         # redémarrage du pod vLLM depuis le passage en stratégie Recreate.
-        # SYS_ADMIN suffit pour CUDA/NVML avec les devices montés explicitement.
+        #
+        # Semaine 5 (moindre privilège) : testé sans SYS_ADMIN — CUDA/NVML
+        # s'en passent très bien du moment que les devices /dev/nvidia* sont
+        # montés explicitement (ce qui est déjà le cas ci-dessous). Capacité
+        # retirée, driver le prouve dans docs/week-05-notes.md.
         securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
           capabilities:
-            add: ["SYS_ADMIN"]
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
         ports:
         - name: http
           containerPort: 8000
@@ -74,6 +91,16 @@ spec:
         env:
         - name: LD_LIBRARY_PATH
           value: /opt/nvidia-libs
+        # runAsUser 1000 n'a pas d'entrée dans /etc/passwd de cette image
+        # (construite pour tourner en root). Sans ça, `getpass.getuser()`
+        # (utilisé par torch._inductor pour son cache dir) plante en
+        # `KeyError: getpwuid(): uid not found` — Python essaie d'abord ces
+        # variables d'environnement avant pwd.getpwuid(), donc les poser
+        # suffit à éviter tout le problème sans toucher à l'image.
+        - name: USER
+          value: vllm
+        - name: HOME
+          value: /tmp
         resources:
           requests:
             cpu: "2"
@@ -97,8 +124,28 @@ spec:
           initialDelaySeconds: 120
           periodSeconds: 20
           failureThreshold: 3
+        # /health répond indépendamment de la file de requêtes (vérifié :
+        # reste rapide même sous la charge du balayage de benchmark semaine 4,
+        # qui poussait la latence p95 des vraies requêtes à 55s) — les probes
+        # ci-dessus n'ont donc pas besoin d'être desserrées pour ça.
+        lifecycle:
+          preStop:
+            # Laisse le temps au kube-proxy/Ingress de retirer ce pod de la
+            # rotation avant que vLLM ne reçoive le SIGTERM, pour ne pas
+            # couper des requêtes en cours d'admission juste avant l'arrêt.
+            exec:
+              command: ["/usr/bin/sleep", "5"]
         volumeMounts:
-        - mountPath: /root/.cache/huggingface
+        # readOnlyRootFilesystem: true (semaine 5) — /tmp et /dev/shm ont
+        # besoin de leur propre volume inscriptible. /dev/shm en particulier :
+        # PyTorch/vLLM s'en servent pour l'IPC entre le process API et
+        # l'engine core (architecture V1), la taille par défaut du rootfs
+        # (souvent 64Mi) ne suffit pas toujours pour des tenseurs partagés.
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /cache/huggingface
           name: model-cache
         - mountPath: /opt/nvidia-libs
           name: nvidia-libs
@@ -112,6 +159,12 @@ spec:
         - mountPath: /dev/nvidia-uvm-tools
           name: dev-nvidia-uvm-tools
       volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
       - name: model-cache
         persistentVolumeClaim:
           claimName: vllm-model-cache

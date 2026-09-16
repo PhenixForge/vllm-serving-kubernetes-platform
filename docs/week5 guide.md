@@ -48,7 +48,14 @@ L'objectif de cette cinquième semaine est de faire passer la plateforme d'un é
 
 ---
 
-# A faire
-## Manifestes YAML pour les NetworkPolicies 
+# ✅ Semaine 5 bouclée (2026-09-16)
 
-## Configuration du SecurityContext conteneurisé
+Tous les points ci-dessus ont été traités — détails complets et écueils dans [week-05-notes.md](week-05-notes.md).
+
+- `kubernetes/network-policy.yaml` écrit et appliqué (deny-all + trous explicites), mais **inerte sur ce cluster** : kindnetd n'a pas de contrôleur NetworkPolicy, vérifié empiriquement (un pod hors-liste blanche accède quand même au service). IaC correcte quand même, prête pour EKS/VPC CNI.
+- Dette technique signalée plus haut (`privileged: true`) déjà résolue en semaine 4, en fait — retiré en traquant un bug de device nodes cassés sur le nœud kind, avant même d'attaquer cette semaine.
+- SecurityContext durci (`runAsNonRoot`, UID 1000, `allowPrivilegeEscalation: false`, `capabilities: drop: [ALL]`, `readOnlyRootFilesystem: true`) — trois bloqueurs en cascade (capacité en fait inutile, `getpass.getuser()` qui plante sans entrée `/etc/passwd`, `/root` intraversable pour un non-root) tous résolus et vérifiés par une inférence de bout en bout qui fonctionne toujours.
+- Pas de `kubernetes/secret.yaml` : aucun `HF_TOKEN` n'est utilisé (modèle public) — décision documentée plutôt que Secret fantôme.
+- `terminationGracePeriodSeconds` + `preStop` ajoutés et testés en conditions réelles (~7s pour un arrêt propre).
+- Ingress verrouillé : Basic Auth (pas de passerelle API dans ce lab) + rate limiting 5 rps/IP, testé (401/401/200).
+- Taints/Tolerations/NodeAffinity : déjà posés en semaine 4, rien à refaire — le taint réel attend les node groups GPU dédiés d'EKS.

@@ -1,6 +1,6 @@
 # Extensions Roadmap — vllm-serving-kubernetes-platform
 
-After the core **12-week roadmap (Weeks 1–5 on local k8s + Weeks 6–12 on AWS EKS)**, the following extensions are planned as distinct sessions, building on the foundation already in place.
+After the core **12-week roadmap (Weeks 1–6 on local k8s + EKS migration, Weeks 7–12 on AWS EKS)**, the following extensions are planned as distinct sessions, building on the foundation already in place.
 
 ## Phase A: MCP Server for Observability Queries
 
@@ -220,7 +220,7 @@ Easily justifiable for a portfolio project. If cost becomes a concern, scale dow
 
 ## Next Step
 
-Once Week 5 is done and core Kubernetes stack is solid:
+Once Week 6 is done and the core Kubernetes stack (local kind + EKS) is solid:
 1. Schedule **Phase A (MCP)** as your next session (~2–3 hours)
 2. Collect 10–15 realistic questions about your deployment for Phase B (RAG) golden QA suite
 3. Plan Phase C (Evaluation) as the final polish before LinkedIn publication

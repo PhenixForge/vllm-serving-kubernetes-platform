@@ -15,13 +15,15 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 5/12 — starting**
+**Week 6/12 — starting**
 
 Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
 Deployed on a local Kubernetes cluster (kind) with GPU passthrough: Deployment, Service, Ingress (SSE streaming validated end-to-end), PVC and KEDA autoscaling manifests applied.
 
 Full observability stack live: Prometheus + DCGM Exporter (GPU metrics) + Grafana dashboard. KEDA's Prometheus trigger is now healthy end-to-end (`HPAActive=True`). Load benchmarking swept up to 128 concurrent requests with zero failures — vLLM's scheduler throttles admission under KV cache pressure (99.5% usage observed) instead of OOMing.
+
+Security hardening done: `vllm-server` runs non-root (UID 1000), no capabilities, read-only root filesystem, no `privileged`. NetworkPolicies written and applied (inert on this cluster's CNI — no policy engine, documented). Ingress locked down with Basic Auth + rate limiting.
 
 ---
 
@@ -137,7 +139,8 @@ graph TB
 - [x] **Week 2** — clean Containerfile, all OpenAI-compatible endpoints tested
 - [x] **Week 3** — Kubernetes deployment on kind (local), GPU passthrough, Ingress + SSE streaming validated, KEDA autoscaler wired (Prometheus trigger pending Week 4)
 - [x] **Week 4** — Prometheus/DCGM/Grafana observability, load benchmarking (128 concurrent requests, 0 failures), GPU resource management (nodeAffinity/tolerations)
-- [ ] **Week 5-6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling
+- [x] **Week 5** — security hardening: NetworkPolicies (written, inert on kindnet — no policy engine), non-root/read-only SecurityContext, secrets review (none needed — public model), graceful shutdown, Ingress Basic Auth + rate limiting
+- [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling
 - [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
 - [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)
 - [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article

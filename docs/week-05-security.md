@@ -4,7 +4,7 @@ Full write-up (network policies, SecurityContext, secrets management, HA/probes)
 
 ## Next Steps: Extensions
 
-With the core Kubernetes platform stable (Weeks 1–5), three independent extensions are planned:
+Once the core Kubernetes platform is stable (Weeks 1–6, including the EKS migration), three independent extensions are planned:
 
 - **MCP Server** (1 session): Expose Prometheus/DCGM metrics via Claude — [docs/extensions/MCP-server.md](extensions/MCP-server.md)
 - **RAG Layer** (3 sessions): Query documentation semantically with Qdrant + vLLM — [docs/extensions/RAG-strategy.md](extensions/RAG-strategy.md)

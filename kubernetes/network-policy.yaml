@@ -1,0 +1,86 @@
+# Isolation réseau du namespace vllm : deny-all par défaut, puis trous
+# explicites pour ce qui doit vraiment passer.
+#
+# ATTENTION (semaine 5) : ce cluster kind utilise kindnetd comme CNI, qui
+# n'implémente PAS de contrôleur NetworkPolicy (pas de Calico/Cilium agent —
+# vérifié : aucun pod de policy engine dans le cluster). Ces manifestes sont
+# acceptés par l'API server et donc valides/versionnés, mais **n'ont aucun
+# effet réel sur ce cluster** — vérifié empiriquement, cf. docs/week-05-notes.md.
+# Sur EKS (semaine 6), l'Amazon VPC CNI supporte nativement l'enforcement
+# des NetworkPolicy depuis EKS 1.25 (flag ENABLE_NETWORK_POLICY) : ces mêmes
+# manifestes y seront réellement appliqués sans modification.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: vllm
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vllm-allow-ingress
+  namespace: vllm
+spec:
+  podSelector:
+    matchLabels:
+      app: vllm-server
+  policyTypes:
+    - Ingress
+  ingress:
+    # Trafic applicatif : uniquement depuis le contrôleur Ingress.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Scraping /metrics : la consigne littérale de la semaine 5 ("uniquement
+    # depuis le contrôleur Ingress") casserait Prometheus, construit en
+    # semaine 4. Trou explicite plutôt que suivre la consigne à la lettre.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vllm-allow-egress
+  namespace: vllm
+spec:
+  podSelector:
+    matchLabels:
+      app: vllm-server
+  policyTypes:
+    - Egress
+  egress:
+    # DNS.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS sortant (Hugging Face Hub pour un futur changement de modèle —
+    # celui en place est déjà mis en cache sur le PVC). Restreint au port
+    # 443 plutôt qu'à des plages d'IP HF précises : les IP de CDN HF changent
+    # trop souvent pour être épinglées de façon fiable dans un lab.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443

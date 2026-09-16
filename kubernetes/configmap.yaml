@@ -6,7 +6,13 @@ metadata:
   name: vllm-config
   namespace: vllm
 data:
-  HF_HOME: "/root/.cache/huggingface"
+  # Pas /root/.cache/huggingface (semaine 5) : /root est en 700 root:root
+  # dans l'image de base, donc intraversable pour le user non-root
+  # (runAsUser 1000) introduit cette semaine — même avec le bon fsGroup sur
+  # le PVC monté dessous, `stat` renvoie "Permission denied" en essayant de
+  # traverser /root lui-même. Déplacé sous un chemin qui ne dépend d'aucun
+  # dossier hérité de l'image de base.
+  HF_HOME: "/cache/huggingface"
   VLLM_LOGGING_LEVEL: "INFO"
   PYTHONUNBUFFERED: "1"
   # RTX 4060 8Go déjà partagée avec le bureau (~1.9 Go utilisés hors vLLM) :

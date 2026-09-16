@@ -10,6 +10,18 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "off" # détail que beaucoup de monde oublie et qui casse le streaming en silence
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Semaine 5 — accès restreint (Basic Auth plutôt qu'une vraie clé API/JWT :
+    # ingress-nginx la supporte nativement sans passerelle API externe, hors
+    # de portée pour ce lab). Secret créé à la main via `kubectl create secret`
+    # (htpasswd), volontairement PAS commité dans le repo — cf. docs/week-05-notes.md.
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: vllm-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "vLLM API — accès restreint"
+    # Rate limiting : le balayage de charge de la semaine 4 a montré un
+    # plafond de débit compute vers la concurrence 16-32 (RTX 4060) — 5 rps
+    # par IP laisse un usage légitime normal tout en empêchant un seul
+    # client de saturer le GPU à lui seul.
+    nginx.ingress.kubernetes.io/limit-rps: "5"
 spec:
   rules:
   - host: vllm.local # Remplacez par votre FQDN
