@@ -1,0 +1,32 @@
+# Config Prometheus minimale (pas d'Operator, pas de Helm — cf. décision KEDA
+# de la semaine 3). Cibles en static_configs : pas besoin de RBAC sur l'API
+# Kubernetes pour un lab mono-namespace comme celui-ci.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: vllm
+        metrics_path: /metrics
+        static_configs:
+          # label statique "namespace" : requis par la query du KEDA
+          # ScaledObject (sum(vllm:num_requests_waiting{namespace="vllm"})) ;
+          # les métriques natives vLLM n'exposent pas ce label elles-mêmes
+          # (pas de service discovery K8s ici, cf. commentaire plus haut).
+          - targets: ["vllm-service.vllm.svc.cluster.local:8000"]
+            labels:
+              namespace: vllm
+
+      - job_name: dcgm-exporter
+        static_configs:
+          - targets: ["dcgm-exporter.monitoring.svc.cluster.local:9400"]
+
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]

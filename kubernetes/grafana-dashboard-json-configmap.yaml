@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-vllm-gpu
+  namespace: monitoring
+data:
+  vllm-gpu.json: |
+    {
+      "title": "vLLM + GPU",
+      "uid": "vllm-gpu",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "timezone": "browser",
+      "time": { "from": "now-30m", "to": "now" },
+      "refresh": "15s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requests running / waiting",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            { "expr": "vllm:num_requests_running", "legendFormat": "running", "refId": "A" },
+            { "expr": "vllm:num_requests_waiting", "legendFormat": "waiting", "refId": "B" }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Token throughput",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "targets": [
+            { "expr": "rate(vllm:generation_tokens_total[1m])", "legendFormat": "generation tok/s", "refId": "A" },
+            { "expr": "rate(vllm:prompt_tokens_total[1m])", "legendFormat": "prompt tok/s", "refId": "B" }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Time to First Token (TTFT)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "targets": [
+            { "expr": "histogram_quantile(0.50, sum(rate(vllm:time_to_first_token_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+            { "expr": "histogram_quantile(0.95, sum(rate(vllm:time_to_first_token_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B" }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Inter-Token Latency (ITL)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "targets": [
+            { "expr": "histogram_quantile(0.50, sum(rate(vllm:inter_token_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+            { "expr": "histogram_quantile(0.95, sum(rate(vllm:inter_token_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B" }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "KV Cache usage",
+          "type": "gauge",
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+          "targets": [
+            { "expr": "vllm:kv_cache_usage_perc", "legendFormat": "KV cache", "refId": "A" }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "GPU Utilization",
+          "type": "gauge",
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_GPU_UTIL", "legendFormat": "GPU util", "refId": "A" }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "GPU Memory (Used vs Free)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "decmbytes" }, "overrides": [] },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_FB_USED", "legendFormat": "used", "refId": "A" },
+            { "expr": "DCGM_FI_DEV_FB_FREE", "legendFormat": "free", "refId": "B" }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "GPU Temperature / Power draw",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": {}, "overrides": [
+            { "matcher": { "id": "byName", "options": "temp (°C)" }, "properties": [{ "id": "unit", "value": "celsius" }] },
+            { "matcher": { "id": "byName", "options": "power (W)" }, "properties": [{ "id": "unit", "value": "watt" }] }
+          ] },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_GPU_TEMP", "legendFormat": "temp (°C)", "refId": "A" },
+            { "expr": "DCGM_FI_DEV_POWER_USAGE", "legendFormat": "power (W)", "refId": "B" }
+          ]
+        }
+      ]
+    }

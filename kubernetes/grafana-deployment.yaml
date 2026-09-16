@@ -1,0 +1,64 @@
+# Grafana provisionné par fichiers (datasource + dashboard en ConfigMaps) :
+# pas d'état persistant nécessaire, tout est recréé à chaque redémarrage du pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: docker.io/grafana/grafana:11.3.1
+        ports:
+        - name: http
+          containerPort: 3000
+        env:
+        # Admin/admin, lab local uniquement (pas d'exposition externe — accès
+        # via kubectl port-forward, cf. docs/week-04-notes.md).
+        - name: GF_SECURITY_ADMIN_USER
+          value: admin
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: admin
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: datasource
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: dashboard-provider
+        - mountPath: /var/lib/grafana/dashboards
+          name: dashboard-json
+      volumes:
+      - name: datasource
+        configMap:
+          name: grafana-datasource
+      - name: dashboard-provider
+        configMap:
+          name: grafana-dashboard-provider
+      - name: dashboard-json
+        configMap:
+          name: grafana-dashboard-vllm-gpu

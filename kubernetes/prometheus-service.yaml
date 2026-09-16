@@ -1,0 +1,16 @@
+# Nom figé sur prometheus-k8s : c'est le serverAddress attendu par
+# kubernetes/keda-scaledobject.yaml (trigger Prometheus, en attente depuis la semaine 3).
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-k8s
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090

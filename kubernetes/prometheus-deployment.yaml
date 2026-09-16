@@ -1,0 +1,61 @@
+# Prometheus "nu" (pas de Prometheus Operator/Helm — indisponible sur cette
+# machine, cf. docs/week-03-notes.md). Le nom du Service (prometheus-k8s,
+# port 9090) est figé pour matcher kubernetes/keda-scaledobject.yaml, écrit
+# en semaine 3 en anticipation de cette semaine.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  strategy:
+    # RollingUpdate créerait le nouveau pod avant de tuer l'ancien ; les deux
+    # partageraient le PVC RWO local-path (même nœud) et se disputeraient le
+    # lockfile TSDB ("lock DB directory: resource temporarily unavailable").
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: docker.io/prom/prometheus:v2.55.1
+        args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --storage.tsdb.path=/prometheus
+          - --storage.tsdb.retention.time=7d
+        ports:
+        - name: http
+          containerPort: 9090
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/prometheus
+          name: config
+        - mountPath: /prometheus
+          name: data
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: prometheus-data

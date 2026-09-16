@@ -1,0 +1,92 @@
+# Métriques GPU (util, mémoire, température, power draw) via DCGM Exporter.
+# Même recette de passthrough manuel que kubernetes/deployment.yaml (vLLM) :
+# ce cluster n'a pas de nvidia-container-runtime (device plugin en stratégie
+# "envvar" seulement, cf. docs/week-03-notes.md), donc on remonte à la main
+# les devices /dev/nvidia* et les libs host userspace (libnvidia-ml.so.1,
+# suffisant ici — DCGM lui-même est déjà dans l'image, pas besoin de libcuda).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app: dcgm-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dcgm-exporter
+  template:
+    metadata:
+      labels:
+        app: dcgm-exporter
+    spec:
+      containers:
+      - name: dcgm-exporter
+        # Tag précis non vérifié à l'écriture (pas de recherche web dispo dans
+        # cette session) — `latest` choisi volontairement pour ne pas figer un
+        # tag potentiellement inexistant. À épingler sur une version précise
+        # une fois confirmée fonctionnelle.
+        image: nvcr.io/nvidia/k8s/dcgm-exporter:latest
+        # --disable-startup-validate : les checks de démarrage par défaut de
+        # dcgm-exporter échouent silencieusement dans cet environnement minimal
+        # (pas de nvidia-container-runtime, passthrough manuel) — l'appli
+        # affichait juste "exit status 1" sans détail. Flag documenté par
+        # l'outil lui-même pour ce cas ("useful for minimal environments").
+        args:
+          - --disable-startup-validate
+        # Pas de `privileged: true` ici (contrairement à vLLM) : en mode
+        # privileged, runc mirrore TOUS les devices du nœud kind, y compris
+        # /dev/cpu/*/cpuid — cassé dans ce nœud (mode `c---------`,
+        # owner nobody:nogroup) — ce qui fait planter la création du
+        # conteneur ("error creating device nodes"). DCGM n'a besoin que de
+        # SYS_ADMIN (accès NVML) + des devices /dev/nvidia* montés
+        # explicitement ci-dessous.
+        securityContext:
+          capabilities:
+            add: ["SYS_ADMIN"]
+        ports:
+        - name: metrics
+          containerPort: 9400
+        env:
+        - name: LD_LIBRARY_PATH
+          value: /opt/nvidia-libs
+        - name: DCGM_EXPORTER_LISTEN
+          value: ":9400"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            # 256Mi -> OOMKilled (exit 137) pendant la collecte des groupes de
+            # métriques de profiling ; l'engine DCGM embarqué a besoin de plus.
+            memory: "1Gi"
+        volumeMounts:
+        - mountPath: /opt/nvidia-libs
+          name: nvidia-libs
+          readOnly: true
+        - mountPath: /dev/nvidia0
+          name: dev-nvidia
+        - mountPath: /dev/nvidiactl
+          name: dev-nvidiactl
+        - mountPath: /dev/nvidia-uvm
+          name: dev-nvidia-uvm
+        - mountPath: /dev/nvidia-uvm-tools
+          name: dev-nvidia-uvm-tools
+      volumes:
+      - name: nvidia-libs
+        hostPath:
+          path: /opt/nvidia-libs
+      - name: dev-nvidia
+        hostPath:
+          path: /dev/nvidia0
+      - name: dev-nvidiactl
+        hostPath:
+          path: /dev/nvidiactl
+      - name: dev-nvidia-uvm
+        hostPath:
+          path: /dev/nvidia-uvm
+      - name: dev-nvidia-uvm-tools
+        hostPath:
+          path: /dev/nvidia-uvm-tools

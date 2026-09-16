@@ -10,6 +10,13 @@ metadata:
     app: vllm-server
 spec:
   replicas: 1
+  strategy:
+    # RollingUpdate (par défaut) crée le nouveau pod avant de tuer l'ancien ;
+    # sur ce nœud à un seul GPU, le nouveau reste bloqué en Pending
+    # ("Insufficient nvidia.com/gpu") tant que l'ancien tient la seule unité
+    # disponible. Même leçon que Prometheus (semaine 4) avec son PVC RWO,
+    # cette fois sur une contrainte GPU plutôt que stockage.
+    type: Recreate
   selector:
     matchLabels:
       app: vllm-server
@@ -18,17 +25,46 @@ spec:
       labels:
         app: vllm-server
     spec:
+      # Isolation des charges GPU. Sur ce cluster kind mono-nœud, la
+      # nodeAffinity est vérifiable (le nœud est labellisé nvidia.com/gpu.present=true
+      # ci-dessous) mais n'isole rien puisqu'il n'y a qu'un seul nœud. La
+      # toleration, elle, ne fait rien tant qu'aucun taint ne matche — posée
+      # par anticipation de la migration EKS (semaines 5-6), où les node groups
+      # GPU (g5.xlarge, via Karpenter) porteront réellement ce taint pour
+      # empêcher des pods non-GPU de s'y faire scheduler.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values: ["true"]
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
       containers:
       - name: vllm
         image: localhost/vllm-mistral-7b-v01:latest
         imagePullPolicy: Never # image chargée localement dans kind, jamais pull depuis un registre
-        # privileged + montages /dev/nvidia*+libs : le device plugin annonce
+        # Montages /dev/nvidia*+libs à la main : le device plugin annonce
         # nvidia.com/gpu mais utilise la stratégie "envvar" (NVIDIA_VISIBLE_DEVICES),
         # qui suppose nvidia-container-runtime pour l'injection réelle des devices/libs.
         # Ce cluster n'en a pas (setup manuel, voir docs/week-03-notes.md) : on
         # reproduit l'injection à la main tant que ce n'est pas en place.
+        #
+        # PAS de `privileged: true` (semaine 4) : en mode privileged, runc
+        # mirrore tous les devices du nœud kind, y compris /dev/cpu/*/cpuid —
+        # cassé sur ce nœud (mode `c---------`, owner nobody:nogroup) — ce qui
+        # fait planter la création du conteneur à chaque recréation du pod
+        # ("error creating device nodes"). Découvert sur dcgm-exporter d'abord
+        # (cf. docs/week-04-notes.md), puis reproduit ici au premier
+        # redémarrage du pod vLLM depuis le passage en stratégie Recreate.
+        # SYS_ADMIN suffit pour CUDA/NVML avec les devices montés explicitement.
         securityContext:
-          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN"]
         ports:
         - name: http
           containerPort: 8000
