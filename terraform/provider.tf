@@ -19,7 +19,11 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
+  # helm provider v3 : `kubernetes` est un attribut objet (nested attribute,
+  # syntaxe `=`), plus un bloc imbriqué comme en v2 — breaking change de la
+  # migration vers le terraform-plugin-framework, vérifié contre le schéma
+  # réel du provider (`terraform providers schema -json`), pas la mémoire.
+  kubernetes = {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     token                  = data.aws_eks_cluster_auth.this.token

@@ -1,0 +1,137 @@
+# Déploiement vLLM sur EKS — variante de kubernetes/deployment.yaml (kind local).
+# Différences, toutes liées au passthrough GPU :
+#   - Pas de mounts hostPath sur /dev/nvidia*/opt/nvidia-libs, pas de
+#     LD_LIBRARY_PATH : sur l'AMI accélérée (Karpenter, amiFamily: AL2), le
+#     nvidia-container-runtime + le device plugin (kubernetes-eks/nvidia-device-plugin.yaml)
+#     injectent les devices/libs automatiquement — c'est précisément ce que
+#     le passthrough manuel de kind reproduisait à la main (cf. docs/week-03-notes.md).
+#   - `image` pointe vers un registre réel (ECR) — plus de `imagePullPolicy: Never`
+#     ni de `kind load docker-image`. À construire et pousser AVANT le premier
+#     déploiement (pas fait par ce Terraform/ces manifestes, cf. kubernetes-eks/README.md) :
+#       docker build -t <ECR_REPO_URI>:latest -f container/Containerfile .
+#       docker push <ECR_REPO_URI>:latest
+#   - Le reste (SecurityContext durci semaine 5, nodeAffinity/toleration GPU
+#     semaine 4, Recreate, probes, lifecycle, /tmp+/dev/shm) est IDENTIQUE et
+#     repris tel quel — rien de tout ça n'était spécifique à kind.
+#
+# PAS ENCORE VÉRIFIÉ EN PRATIQUE (pas de cluster EKS réel au moment de
+# l'écriture) — en particulier le comportement sans privileged/SYS_ADMIN sur
+# un vrai nvidia-container-runtime reste à confirmer au premier déploiement.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-server
+  namespace: vllm
+  labels:
+    app: vllm-server
+spec:
+  replicas: 1
+  strategy:
+    # Même leçon qu'en semaine 4 (kind) : un seul GPU par nœud g5.xlarge,
+    # RollingUpdate laisserait le nouveau pod en Pending le temps que l'ancien
+    # libère l'unique unité nvidia.com/gpu.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vllm-server
+  template:
+    metadata:
+      labels:
+        app: vllm-server
+    spec:
+      # Ici la nodeAffinity + toleration isolent RÉELLEMENT les charges GPU
+      # (plusieurs nœuds sur EKS, contrairement au cluster kind mono-nœud où
+      # c'était surtout symbolique, cf. docs/week-04-notes.md) : le taint
+      # nvidia.com/gpu:NoSchedule est posé pour de vrai par Karpenter sur le
+      # NodePool "gpu" (terraform/karpenter.tf), le label nvidia.com/gpu.present=true
+      # aussi (même convention que sur kind, aucun changement ici).
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values: ["true"]
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      securityContext:
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: vllm
+        # Remplacer par l'URI ECR réel avant le premier déploiement.
+        image: <ECR_REPO_URI>:latest
+        imagePullPolicy: IfNotPresent
+        # Repris tel quel de kind (semaine 5) : runAsNonRoot fonctionnait déjà
+        # sans capacité particulière une fois le passthrough manuel retiré —
+        # devrait donc marcher aussi bien, sinon mieux, avec un vrai
+        # nvidia-container-runtime qui gère l'injection des devices lui-même.
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+        ports:
+        - name: http
+          containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: vllm-config
+        env:
+        # USER/HOME toujours nécessaires (semaine 5) : indépendant du
+        # passthrough GPU, c'est `torch._inductor` qui plante sans entrée
+        # /etc/passwd pour un UID arbitraire — même image, même bug.
+        - name: USER
+          value: vllm
+        - name: HOME
+          value: /tmp
+        resources:
+          requests:
+            cpu: "2"
+            memory: "8Gi"
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: "12Gi"
+            nvidia.com/gpu: "1"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/usr/bin/sleep", "5"]
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /cache/huggingface
+          name: model-cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: vllm-model-cache

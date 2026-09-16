@@ -5,7 +5,7 @@
 # même si Karpenter ne provisionnera qu'un nœud GPU à la fois dans ce lab.
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.13"
+  version = "~> 6.7"
 
   name = "${var.cluster_name}-vpc"
   cidr = var.vpc_cidr

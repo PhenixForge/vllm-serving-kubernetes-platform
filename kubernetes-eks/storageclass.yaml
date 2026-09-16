@@ -1,0 +1,15 @@
+# EKS ne fournit aucune StorageClass par défaut (contrairement à kind, où
+# local-path-provisioner en pose une automatiquement) — sans ça, les PVC
+# existants (kubernetes/pvc.yaml, kubernetes/prometheus-pvc.yaml) resteraient
+# `Pending` indéfiniment. Marquée par défaut pour que ces manifestes restent
+# utilisables SANS modification (pas de storageClassName à ajouter partout).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com # addon aws-ebs-csi-driver, cf. terraform/eks.tf
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3

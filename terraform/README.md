@@ -13,10 +13,9 @@ IaC pour l'infrastructure AWS uniquement (VPC, EKS, Karpenter). Les manifestes K
 
 ## Ce que ça ne déploie PAS (encore)
 
-Les manifestes applicatifs eux-mêmes (`kubernetes/*.yaml`) ne sont pas gérés par ce Terraform. Une fois le cluster provisionné, il faudra :
+Les manifestes applicatifs eux-mêmes ne sont pas gérés par ce Terraform. Une fois le cluster provisionné :
 1. `aws eks update-kubeconfig --name vllm-serving --region eu-west-3` (voir l'output `configure_kubectl`)
-2. Adapter les manifestes vLLM/DCGM : sur EKS avec l'AMI accélérée (device plugin NVIDIA + `nvidia-container-runtime` déjà en place), tout le passthrough manuel de `kind` (`securityContext.capabilities`, mounts `hostPath` sur `/dev/nvidia*` et `/opt/nvidia-libs`, cf. `docs/week-03-notes.md`) devient inutile — à vérifier et retirer plutôt qu'à porter tel quel. Pas encore fait : prochaine étape, dans un nouveau dossier (`kubernetes-eks/` ou avec des overlays Kustomize) pour ne pas modifier les manifestes `kind` existants.
-3. Réappliquer Prometheus/DCGM/Grafana/KEDA/Ingress (`kubernetes/*.yaml`, la plupart sans changement — seul le Deployment vLLM et le service GPU changent vraiment).
+2. Suivre [`kubernetes-eks/README.md`](../kubernetes-eks/README.md) — les manifestes EKS-spécifiques (vLLM sans passthrough GPU manuel, DCGM en stratégie envvar, StorageClass gp3, device plugin standard) sont écrits, mais **non vérifiés sur un cluster réel**. Le reste (Prometheus, Grafana, KEDA, Ingress, NetworkPolicy, Service, PVC) se réutilise tel quel depuis `kubernetes/`.
 
 ## Prérequis pour appliquer pour de vrai
 

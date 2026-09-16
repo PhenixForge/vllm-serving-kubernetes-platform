@@ -1,9 +1,9 @@
-# IAM (rôle contrôleur IRSA + rôle/instance-profile des nœuds + file SQS pour
-# les notifications d'interruption spot/rebalance) via le sous-module officiel
-# — évite de réécrire à la main les ~8 ressources IAM que Karpenter attend.
+# IAM (rôle contrôleur + rôle/instance-profile des nœuds + file SQS pour les
+# notifications d'interruption spot/rebalance) via le sous-module officiel —
+# évite de réécrire à la main les ~8 ressources IAM que Karpenter attend.
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 20.31"
+  version = "~> 21.25"
 
   cluster_name = module.eks.cluster_name
 
@@ -11,13 +11,18 @@ module "karpenter" {
   # managé ; Karpenter a besoin d'un profil d'instance équivalent pour les
   # nœuds QU'IL lance lui-même.
   #
-  # IRSA plutôt que Pod Identity (les deux sont supportés par ce sous-module,
-  # AWS pousse plutôt Pod Identity depuis peu) : cohérent avec le rôle IRSA de
-  # l'EBS CSI driver déjà posé dans eks.tf — un seul mécanisme d'auth pour les
-  # deux, plus simple à raisonner que les deux mélangés.
-  enable_irsa            = true
-  irsa_oidc_provider_arn = module.eks.oidc_provider_arn
-  namespace              = "karpenter"
+  # Pod Identity, pas IRSA : v21 de ce sous-module a retiré le support IRSA
+  # (enable_irsa/irsa_oidc_provider_arn n'existent plus, vérifié contre le
+  # module réellement téléchargé — cf. docs/week-06-notes.md), Pod Identity
+  # est désormais le seul mécanisme proposé ici. L'EBS CSI driver (eks.tf)
+  # reste en IRSA de son côté (ce module-là le supporte toujours) — deux
+  # mécanismes différents pour deux modules différents, pas un choix cohérent
+  # à faire nous-mêmes.
+  #
+  # Nécessite l'addon eks-pod-identity-agent (ajouté dans eks.tf) pour
+  # fonctionner réellement au runtime.
+  create_pod_identity_association = true
+  namespace                       = "karpenter"
 }
 
 resource "helm_release" "karpenter" {
@@ -27,7 +32,12 @@ resource "helm_release" "karpenter" {
   name       = "karpenter"
   repository = "oci://public.ecr.aws/karpenter"
   chart      = "karpenter"
-  version    = "1.0.6"
+  # v1.0.6 était la dernière version stable connue au moment où ce fichier a
+  # été écrit — vérifié contre les releases GitHub le 2026-09-17 : v1.14.1
+  # est sortie depuis. Toujours l'API v1 stable (karpenter.sh/v1,
+  # karpenter.k8s.aws/v1, cf. NodePool/EC2NodeClass plus bas), donc pas de
+  # changement de schéma attendu sur les manifestes ci-dessous.
+  version = "1.14.1"
 
   values = [
     yamlencode({
@@ -36,11 +46,12 @@ resource "helm_release" "karpenter" {
         clusterEndpoint   = module.eks.cluster_endpoint
         interruptionQueue = module.karpenter.queue_name
       }
-      serviceAccount = {
-        annotations = {
-          "eks.amazonaws.com/role-arn" = module.karpenter.iam_role_arn
-        }
-      }
+      # Pas d'annotation IRSA sur le ServiceAccount (contrairement à l'EBS CSI
+      # driver, cf. eks.tf) : en Pod Identity, l'association namespace+SA+rôle
+      # se fait via un objet API EKS séparé, créé automatiquement par
+      # `module.karpenter` (create_pod_identity_association=true ci-dessus) —
+      # le nom de SA par défaut du chart ("karpenter") matche déjà la valeur
+      # par défaut de la variable `service_account` du sous-module.
       # Le contrôleur lui-même tourne sur le node group système (eks.tf), pas
       # sur un nœud GPU qu'il n'a pas encore le droit de provisionner tant
       # qu'il n'est pas démarré — dépendance circulaire classique, résolue en

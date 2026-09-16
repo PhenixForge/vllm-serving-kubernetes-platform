@@ -7,17 +7,21 @@ terraform {
   required_version = ">= 1.7"
 
   required_providers {
+    # Versions vérifiées contre le registre Terraform le 2026-09-17 (pas
+    # fiées à la mémoire de l'assistant, dont la connaissance s'arrête à
+    # janvier 2026 — aws/kubernetes/helm avaient tous eu une bump majeure
+    # depuis, cf. docs/week-06-notes.md pour le détail de la vérification).
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.60"
+      version = "~> 6.65"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.31"
+      version = "~> 3.2"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.14"
+      version = "~> 3.3"
     }
     # Pas `hashicorp/kubernetes.kubernetes_manifest` pour les CRD Karpenter
     # (NodePool/EC2NodeClass) : cette ressource a besoin que le CRD existe déjà
@@ -27,7 +31,7 @@ terraform {
     # terraform-aws-modules/eks pour Karpenter.
     kubectl = {
       source  = "gavinbunney/kubectl"
-      version = "~> 1.14"
+      version = "~> 1.19"
     }
   }
 

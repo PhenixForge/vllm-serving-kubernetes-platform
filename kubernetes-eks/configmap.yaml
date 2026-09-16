@@ -1,0 +1,25 @@
+# Variante EKS de kubernetes/configmap.yaml. Une différence réelle :
+# VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0 (kind) contournait un problème
+# spécifique à la RTX 4060 8 Go PARTAGÉE avec le bureau (~1,9 Go déjà pris
+# hors vLLM, cf. kubernetes/configmap.yaml et docs/week-03-notes.md) : avec
+# le profiling CUDA graph par défaut, le KV cache passait en négatif. Le
+# g5.xlarge a 24 Go de VRAM dédiés (A10G, rien d'autre dessus) — cette
+# contrainte ne devrait plus exister. Retiré (profiling CUDA graph par défaut
+# réactivé) plutôt que reconduit sans réfléchir. NON VÉRIFIÉ (pas de cluster
+# réel) — à confirmer au premier déploiement ; si un problème équivalent
+# apparaît, le drapeau existe toujours en secours.
+#
+# --max-model-len 880 et --gpu-memory-utilization 0.6 restent par contre figés
+# dans l'image (container/Containerfile), pas dans cette ConfigMap — les
+# reconsidérer pour profiter des 24 Go du A10G est un changement d'image, pas
+# de manifeste : pas fait cette session (pas de build/push testable sans
+# cluster réel), à traiter séparément.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-config
+  namespace: vllm
+data:
+  HF_HOME: "/cache/huggingface"
+  VLLM_LOGGING_LEVEL: "INFO"
+  PYTHONUNBUFFERED: "1"

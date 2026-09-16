@@ -1,0 +1,89 @@
+# Variante EKS de kubernetes/dcgm-exporter-deployment.yaml. Toute la
+# complexité de la version kind (SYS_ADMIN, mounts hostPath manuels sur
+# /dev/nvidia*+libs, --disable-startup-validate, LD_LIBRARY_PATH) existait
+# uniquement parce que ce cluster n'avait pas de nvidia-container-runtime
+# (cf. docs/week-04-notes.md) — DCGM devait se débrouiller seul pour accéder
+# au GPU.
+#
+# Sur EKS, PAS de `resources.limits."nvidia.com/gpu"` ici — c'est délibéré et
+# identique à la version kind (vérifié : 0 occurrence dans kubernetes/dcgm-exporter-deployment.yaml).
+# Ce champ ferait de DCGM un consommateur EXCLUSIF d'une unité GPU au même
+# titre que vLLM ; sur un nœud g5.xlarge à un seul GPU, ça mettrait DCGM et
+# vLLM en concurrence directe pour l'unique unité annoncée par le device
+# plugin — l'un des deux resterait `Pending`. DCGM doit OBSERVER le GPU, pas
+# le posséder.
+#
+# À la place : stratégie "envvar" (NVIDIA_VISIBLE_DEVICES=all), celle-là même
+# que kubernetes/deployment.yaml (vLLM) mentionne déjà en commentaire comme
+# le mécanisme normal du device plugin NVIDIA quand un vrai
+# nvidia-container-runtime est présent — le runtime injecte lui-même les
+# devices/libs au démarrage du conteneur, sans passer par le comptage de
+# ressources Kubernetes.
+#
+# `privileged: true` reste posé (contrairement à vLLM) — comportement par
+# défaut documenté par NVIDIA pour DCGM Exporter, ses métriques de profiling
+# matériel (NVLink, PCIe, compteurs d'erreurs mémoire) ont besoin d'un accès
+# plus large que la simple injection NVML. Contrairement à kind, ce nœud EKS
+# n'est pas un conteneur imbriqué avec un device cassé (cf. le bug
+# /dev/cpu/*/cpuid des semaines 4-5) — pas de raison a priori que le mode
+# privileged pose problème ici.
+#
+# PAS ENCORE VÉRIFIÉ EN PRATIQUE (pas de cluster EKS réel au moment de
+# l'écriture) — hypothèses à confirmer au premier déploiement.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app: dcgm-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dcgm-exporter
+  template:
+    metadata:
+      labels:
+        app: dcgm-exporter
+    spec:
+      # Toujours planifié sur le nœud GPU (pour observer un GPU), sans en
+      # réclamer l'usage exclusif — d'où la toleration mais pas de resource
+      # request nvidia.com/gpu.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values: ["true"]
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: dcgm-exporter
+        # Même tag que kind (kubernetes/dcgm-exporter-deployment.yaml) : gardé
+        # identique pour ne changer qu'une variable (l'environnement GPU) à la
+        # fois plutôt que de tout changer en même temps sans pouvoir tester.
+        image: nvcr.io/nvidia/k8s/dcgm-exporter:latest
+        securityContext:
+          privileged: true
+        ports:
+        - name: metrics
+          containerPort: 9400
+        env:
+        - name: DCGM_EXPORTER_LISTEN
+          value: ":9400"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "all"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"

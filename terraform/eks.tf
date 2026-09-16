@@ -7,10 +7,16 @@
 # qu'on aurait pu écrire ici.
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.31"
+  version = "~> 21.25"
 
-  cluster_name    = var.cluster_name
-  cluster_version = var.cluster_version
+  # v21 a renommé la plupart des variables "cluster_*" en supprimant le
+  # préfixe (name, kubernetes_version, endpoint_public_access, addons) — les
+  # OUTPUTS gardent eux le préfixe cluster_ (cluster_name, cluster_endpoint,
+  # ... cf. outputs.tf). Vérifié contre le module réellement téléchargé
+  # (.terraform/modules/eks/variables.tf), pas contre la mémoire de
+  # l'assistant — cf. docs/week-06-notes.md.
+  name               = var.cluster_name
+  kubernetes_version = var.cluster_version
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -18,11 +24,11 @@ module "eks" {
   # Accès public au control plane pour ce lab (kubectl depuis n'importe où) ;
   # à restreindre à des CIDR précis (bureau, VPN) avant tout usage au-delà
   # d'un apprentissage solo — cf. terraform/README.md.
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
-  enable_irsa = true # requis pour les rôles IAM du contrôleur Karpenter, de l'EBS CSI driver, etc. (karpenter.tf)
+  enable_irsa = true # requis pour le rôle IAM de l'EBS CSI driver (karpenter.tf est lui passé en Pod Identity, cf. plus bas)
 
-  cluster_addons = {
+  addons = {
     coredns    = { most_recent = true }
     kube-proxy = { most_recent = true }
     vpc-cni = {
@@ -38,9 +44,15 @@ module "eks" {
       })
     }
     aws-ebs-csi-driver = {
-      most_recent              = true
-      service_account_role_arn = module.ebs_csi_irsa.iam_role_arn
+      most_recent = true
+      # iam_role_arn -> arn : renommé dans le module v6 (cf. ebs_csi_irsa ci-dessous).
+      service_account_role_arn = module.ebs_csi_irsa.arn
     }
+    # Requis à l'exécution pour que l'association Pod Identity de Karpenter
+    # (karpenter.tf, create_pod_identity_association) fonctionne réellement —
+    # cet agent injecte les credentials dans les pods, faute de quoi
+    # l'association existe côté API EKS mais n'a aucun effet.
+    eks-pod-identity-agent = { most_recent = true }
   }
 
   eks_managed_node_groups = {
@@ -66,10 +78,12 @@ module "eks" {
 }
 
 module "ebs_csi_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.44"
+  # v6 a renommé ce sous-module (retiré le suffixe -eks) et sa variable
+  # role_name -> name — vérifié contre .terraform/modules/, pas la mémoire.
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.8"
 
-  role_name             = "${var.cluster_name}-ebs-csi"
+  name                  = "${var.cluster_name}-ebs-csi"
   attach_ebs_csi_policy = true
 
   oidc_providers = {
