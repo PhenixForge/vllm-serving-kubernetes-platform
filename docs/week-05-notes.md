@@ -1,5 +1,7 @@
 # Week 05 — Notes
 
+> Période : 2026-09-16 (bouclée ce jour-là). Journal chronologique daté, pas l'état courant du dépôt.
+
 ## Reprise de session
 
 Même procédure que les semaines précédentes (`podman start vllm-cluster-control-plane` + export kubeconfig). Même pod fantôme `vllm-server` en `UnexpectedAdmissionError` au redémarrage (device-plugin GPU qui se ré-enregistre) — nettoyé par `kubectl delete pod`. Rien de nouveau ici, cf. docs/week-03-notes.md et docs/week-04-notes.md pour le détail de ce rituel.

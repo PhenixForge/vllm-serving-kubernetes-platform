@@ -66,11 +66,19 @@ resource "helm_release" "karpenter" {
 }
 
 # EC2NodeClass : QUOI lancer (AMI, sous-réseaux, security groups, rôle IAM
-# des nœuds). amiFamily=AL2 : Karpenter choisit automatiquement la variante
-# AMI "accelerated" (drivers NVIDIA + nvidia-container-runtime préinstallés)
-# quand le type d'instance a un GPU — pas besoin d'épingler un AMI ID à la
-# main comme sur kind (cf. docs/week-03-notes.md, tout le passthrough manuel
-# n'existe que parce que kind n'a pas cette AMI).
+# des nœuds). amiSelectorTerms.alias = al2023@latest : Karpenter choisit
+# automatiquement la variante AMI "accelerated" (drivers NVIDIA +
+# nvidia-container-runtime préinstallés) quand le type d'instance a un GPU —
+# pas besoin d'épingler un AMI ID à la main comme sur kind (cf.
+# docs/week-03-notes.md, tout le passthrough manuel n'existe que parce que
+# kind n'a pas cette AMI).
+#
+# AL2 n'est plus une option : EKS ne publie plus d'AMI AL2 à partir de
+# Kubernetes 1.33 (doc Karpenter, "AL2 support dropped at Kubernetes 1.33"),
+# et ce lab cible 1.36. amiSelectorTerms est de plus obligatoire en API v1
+# (amiFamily seul ne suffit plus). "@latest" convient à un lab ; pour un
+# environnement reproductible, épingler une version (al2023@vYYYYMMDD) ou
+# une AMI Packer (cf. docs/extensions/vault-and-packer.md).
 resource "kubectl_manifest" "gpu_node_class" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.k8s.aws/v1"
@@ -79,8 +87,10 @@ resource "kubectl_manifest" "gpu_node_class" {
       name = "gpu"
     }
     spec = {
-      amiFamily = "AL2"
-      role      = module.karpenter.node_iam_role_name
+      amiSelectorTerms = [
+        { alias = "al2023@latest" }
+      ]
+      role = module.karpenter.node_iam_role_name
       subnetSelectorTerms = [
         { tags = { "karpenter.sh/discovery" = module.eks.cluster_name } }
       ]

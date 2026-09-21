@@ -121,13 +121,13 @@ def chunk_yaml(filepath, chunk_size_tokens=300):
 | Aspect | Qdrant | pgvector |
 |--------|--------|----------|
 | **Deployment** | Standalone container + PVC | PostgreSQL extension (existing DB) |
-| **Cost** | Separate infra | Reuse Valeo's PostgreSQL |
+| **Cost** | Separate infra | Reuse an existing PostgreSQL |
 | **Ease of Setup** | 5 min (Helm chart) | Terraform + SQL migrations |
 | **Scalability** | Good for 10k–1M vectors | Depends on Postgres instance |
 | **Reranking** | Tightly integrated | Manual implementation |
 | **Portfolio Signal** | "Full-stack vector DB" | "Production-grade integration" |
 
-**Decision**: Start with **Qdrant** (simpler deployment, self-contained), migrate to **pgvector** if Valeo's PostgreSQL already has it enabled and you need tighter integration.
+**Decision**: Start with **Qdrant** (simpler deployment, self-contained), migrate to **pgvector** if an existing PostgreSQL instance already has it enabled and you need tighter integration.
 
 ---
 

@@ -1,6 +1,10 @@
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.26%2B-326CE5?logo=kubernetes)](https://kubernetes.io/)
+[![Status](https://img.shields.io/badge/status-Week_6%2F12-orange)](#status)
+[![Versions verified](https://img.shields.io/badge/versions_verified-2026--09--21-green)](#version-policy--provisioning-without-toil)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.36_(EKS_target)-326CE5?logo=kubernetes&logoColor=white)](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html)
+[![Terraform](https://img.shields.io/badge/Terraform-%E2%89%A51.7-844FBA?logo=terraform&logoColor=white)](terraform/)
+[![Karpenter](https://img.shields.io/badge/Karpenter-1.14.1-blue)](terraform/karpenter.tf)
+[![vLLM](https://img.shields.io/badge/vLLM-0.20.2-blueviolet)](container/Containerfile)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-v1.22%2B-00ADD8?logo=go)](https://golang.org/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Julien-blue?logo=linkedin)](https://www.linkedin.com/in/julien-p-68834731/?locale=fr)
 
 # Production-grade LLM serving platform on Kubernetes
@@ -15,7 +19,7 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 6/12 — in progress**
+**Week 6/12 — in progress** · last updated 2026-09-21 (see [Timeline](#timeline--how-to-read-this-repo))
 
 Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
@@ -26,6 +30,58 @@ Full observability stack live: Prometheus + DCGM Exporter (GPU metrics) + Grafan
 Security hardening done: `vllm-server` runs non-root (UID 1000), no capabilities, read-only root filesystem, no `privileged`. NetworkPolicies written and applied (inert on this cluster's CNI — no policy engine, documented). Ingress locked down with Basic Auth + rate limiting.
 
 EKS migration: Terraform written for VPC + EKS + Karpenter-managed GPU node pool (see [`terraform/`](terraform/)) — validated (`init`/`validate`/`plan` up to the expected missing-credentials wall) but **not applied**. EKS-specific Kubernetes manifests also written (see [`kubernetes-eks/`](kubernetes-eks/) — no manual GPU passthrough needed there, unlike `kind`) but not yet deployed to a real cluster. No AWS credentials configured yet, and standing up real GPU nodes costs real money — that step is deliberately left for a deployer with an AWS account and budget sign-off, not run automatically.
+
+---
+
+## Timeline — how to read this repo
+
+This is a **multi-month, part-time project**, not a 12-calendar-week sprint. "Week N" is a unit of *content* inherited from the original plan; the dates below are the real ones (from the commit history).
+
+| Period | What happened |
+|---|---|
+| 2026-05-09 → 05-11 | Week 1 — local vLLM inference, baseline benchmark, README |
+| 2026-05-26 → 07-03 | Week 2 — containerisation (`Containerfile`, GPU tuning on 06-30, OpenAI-compatible chat), Week 1–2 guides and feedback |
+| 2026-07-03 → 08-18 | Gap in commits; documentation pass on 2026-08-18 (guides for Weeks 1–5, incl. the new Week 5 security guide) |
+| 2026-09-13 → 09-17 | Weeks 3–6 in one focused stretch — Kubernetes on kind, observability, security hardening, EKS Terraform |
+| 2026-09-21 | Terraform/EKS re-verified and moved to Kubernetes 1.36 (see below) |
+
+### Validated so far — nothing here restarts from zero
+
+Each week below was validated when it was done, and the result is committed. The next stages build on these; they do not redo them. The commit history is kept as-is (no rewriting), so the dates below are the real ones.
+
+| Week | Dates | Commits | Validated by | Carries over to EKS |
+|---|---|---|---|---|
+| 1 | 2026-05-09 | `77b313e`, `d4ab0e4` | Baseline latency/throughput captured ([`week-01-baseline.md`](docs/week-01-baseline.md)) | Benchmark script, model choice |
+| 2 | 2026-05-26 → 07-03 | `5dafe1e`, `0f8befd`, `e965b81`…`dfd515e` | Containerised vLLM answering OpenAI-compatible requests | `container/Containerfile` (image pushed to ECR) |
+| 3 | 2026-09-13 → 09-15 | `c0ae78a`…`44f1db3`, closed by `fba5c9d` | Real inference from a pod on kind (2026-09-14); Ingress + SSE streaming; validation closed 2026-09-15 | Service, PVC, ConfigMap, Ingress manifests |
+| 4 | 2026-09-16 | `b17cdbe` | KEDA `HPAActive=True` on a live Prometheus value; 128 concurrent requests, 0 failures | Prometheus, Grafana, KEDA `ScaledObject`, DCGM (EKS variant) |
+| 5 | 2026-09-16 | `d1490b1` | Non-root inference end to end; Basic Auth 401/401/200; ~7 s graceful shutdown; NetworkPolicy inertness proven on kindnet | `network-policy.yaml` unchanged (enforced by VPC CNI on EKS), hardened Deployment |
+| 6 | 2026-09-17, revised 2026-09-21 | `6405b71`*, `be4b0a6` | `terraform init` + `validate` green; `plan` stops at the expected missing-credentials wall — **not applied** | — (this is the new work) |
+
+\* The message of `6405b71` reads "week5: Terraform code" but the content is the Week 6 Terraform; history was not rewritten to change it.
+
+What is left is genuinely new: the real `apply`, then proving on EKS what was already proven on kind (KEDA scaling and load testing on cloud GPUs, the same observability stack, cost per 1M tokens).
+
+Consequences for the reader, and for the maintainer:
+
+- **Everything is a dated snapshot.** Versions, support windows and "latest" claims are true *as of the date stated next to them*; upstream moves on during a months-long project (the EKS/Terraform layer had drifted from the versions first pinned by the time it was reviewed — see the Week 6 lessons). Each week's notes are a chronological log, not a description of the current state — the current state is this README and the manifests.
+- **Re-verify before you provision.** The EKS layer was written months before any real `apply` is expected. A pre-apply checklist (support calendar, compatibility matrix, current module/provider versions) lives in [`terraform/README.md`](terraform/README.md#avant-de-lancer-un-apply--re-vérifier-les-versions).
+- **Deferred work is deliberate, not forgotten.** The real `apply` needs AWS credentials and a budget sign-off; extensions (MCP, RAG, evaluation, Vault, Packer) are scheduled after the core project — see [`docs/extensions/EXTENSIONS_ROADMAP.md`](docs/extensions/EXTENSIONS_ROADMAP.md).
+
+---
+
+## Version policy — provisioning without toil
+
+The provisioned layer targets the **current** Kubernetes release, checked against the official AWS documentation rather than assumed, so the demo doesn't ship already deprecated:
+
+- **Kubernetes 1.36** — the newest EKS version in standard support at the time of writing, per the [EKS Kubernetes versions page](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html). Standard support lasts 14 months, then paid extended support: creating a cluster on an older version buys an upgrade chore (and a surcharge) on day one.
+- **Amazon Linux 2023 nodes** — EKS stopped publishing AL2 AMIs after Kubernetes 1.32, so AL2 was never an option for a current cluster.
+- **Compatibility checked ahead of the apply** — Karpenter's compatibility matrix (1.36 needs Karpenter ≥ 1.13; the chart is pinned at 1.14.1), the EKS 1.36 release notes (removed/deprecated features such as `gitRepo` volumes and `externalIPs`, containerd 2.x requirement) and the current Terraform provider/module majors, all queried against the live registries.
+- **Deliberate drift from the local cluster** — `kind` stays on an older version for the Week 3–5 work; the cloud target does not inherit it.
+
+Why this matters (SRE): a forced upgrade, an unsupported AMI family or a surprise extended-support bill discovered *after* deployment is pure toil — repetitive, manual, automatable-away work with no lasting value. Reading the release calendar and compatibility matrices before provisioning removes it at the source. `terraform validate` cannot catch any of this (a valid config can still target an end-of-life version); it only shows up at apply time, or on the bill. Details and the exact corrections in [`docs/week-06-notes.md`](docs/week-06-notes.md).
+
+Scope note: this policy is applied to the EKS/Terraform layer. Application-layer images in `kubernetes/` (Prometheus, Grafana, ingress controller, DCGM) were pinned during Weeks 3–5 and are being reviewed against the same rule — the ingress controller is the priority, since the upstream ingress-nginx project has been archived.
 
 ---
 
@@ -216,8 +272,8 @@ graph TB
 - [x] **Week 4** — Prometheus/DCGM/Grafana observability, load benchmarking (128 concurrent requests, 0 failures), GPU resource management (nodeAffinity/tolerations)
 - [x] **Week 5** — security hardening: NetworkPolicies (written, inert on kindnet — no policy engine), non-root/read-only SecurityContext, secrets review (none needed — public model), graceful shutdown, Ingress Basic Auth + rate limiting
 - [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling. Terraform (`terraform/`) and EKS-specific Kubernetes manifests (`kubernetes-eks/`) written and validated; not yet applied/deployed (no AWS credentials, real cost — deliberately left for manual apply)
-- [ ] **Week 7-8** — KEDA pod autoscaling on queue depth, load testing with latency benchmarks
-- [ ] **Week 9-10** — full observability stack (Prometheus, DCGM, Grafana dashboard: TTFT, GPU util, throughput, cost per 1M tokens)
+- [ ] **Week 7-8** — prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), with load testing and latency benchmarks on real cloud GPUs
+- [ ] **Week 9-10** — replicate the observability stack validated in Week 4 on EKS and add the cloud-only panel: cost per 1M tokens (TTFT, GPU util, throughput dashboards already exist)
 - [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article
 
 ---
@@ -347,6 +403,9 @@ This week's lesson wasn't about Kubernetes or AWS at all — it was about the sh
 
 ### AI-authored Terraform goes stale the moment it's written
 I asked Claude Code to write the EKS + Karpenter Terraform, and it pinned every provider and module version from its training data. A simple question — "why is the Helm provider resolving to 2.17.0 when Helm is well past 3.20 by now?" — turned out to conflate two things (a Terraform *provider's* version number has never tracked the wrapped tool's own version), but it also surfaced a real problem underneath: every single pinned dependency had a major version bump by the actual current date, roughly eight months past the assistant's training cutoff — `hashicorp/aws` 5→6, `hashicorp/kubernetes` 2→3, `hashicorp/helm` 2→3, the `terraform-aws-modules` EKS/VPC/IAM modules all majored up, and the Karpenter chart itself jumped from 1.0.6 to 1.14.1. None of this shows up as an error until you actually try to `init` against the real registry.
+
+### "Valid" isn't the same as "supported"
+A second pass against the official AWS and Karpenter docs found that the first draft targeted Kubernetes 1.30 with an `AL2` node image. Both `init` and `validate` were green; neither would have survived contact with a real `apply` — EKS no longer ships AL2 AMIs past 1.32, Karpenter's v1 API requires an explicit `amiSelectorTerms`, and 1.30 had already left standard support. Moved to Kubernetes 1.36 on AL2023, with the compatibility matrix checked first. The takeaway is a habit rather than a fix: before provisioning anything, read the vendor's support calendar and compatibility table for the exact environment being targeted — cheaper than any upgrade or surcharge discovered later.
 
 ### Major version bumps in "stable" modules can be one-way traps
 Re-verifying against the actually-downloaded module source (not memory) caught two nasty ones: the EKS module dropped the `cluster_` prefix from its input variables but kept it on every output — an easy asymmetric mistake to miss — and Karpenter's own IAM submodule removed IRSA support entirely in favor of Pod Identity, which isn't a renamed field, it's a different security mechanism requiring a different EKS addon.

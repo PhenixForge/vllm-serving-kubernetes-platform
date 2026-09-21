@@ -1,5 +1,7 @@
 # Week 06 — Notes
 
+> Période : 2026-09-17 (premier jet + montée de versions), révisé le 2026-09-21 (cible Kubernetes 1.36). Journal chronologique daté : les versions citées sont celles vérifiées à ces dates, pas des valeurs à réutiliser telles quelles des mois plus tard.
+
 Pas de `week6 guide.md` pré-existant (contrairement aux semaines 1-5) — scope tiré de la ligne roadmap du README : "migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling".
 
 ## Décision de scope : Terraform écrit, rien appliqué
@@ -13,7 +15,7 @@ Aucune credential AWS configurée sur cette machine (pas de `~/.aws`, pas de var
 Points notables :
 - **VPC CNI avec `ENABLE_NETWORK_POLICY=true`** : les `NetworkPolicy` de la semaine 5, écrites et vérifiées inertes sur `kind` (kindnetd n'a pas de contrôleur de policy), seront réellement appliquées ici sans aucune modification — la promesse faite dans `kubernetes/network-policy.yaml` se concrétise.
 - **Le taint `nvidia.com/gpu:NoSchedule` posé pour de vrai** sur le `NodePool` Karpenter — la toleration ajoutée sur `vllm-server` dès la semaine 4, en anticipation, explicitement documentée comme "symbolique sur un cluster mono-nœud", trouve enfin son utilité : le node group système héberge les composants non-GPU séparément, donc plus de conflit comme sur `kind`.
-- **`amiFamily: AL2`** sur l'`EC2NodeClass` : Karpenter sélectionne automatiquement l'AMI EKS "accelerated" (drivers NVIDIA + `nvidia-container-runtime` préinstallés) pour les instances avec GPU — tout le passthrough manuel de `kind` (mounts `hostPath` sur `/dev/nvidia*`, libs userspace copiées à la main, cf. `docs/week-03-notes.md`) n'a plus de raison d'être ici. Pas encore vérifié en pratique (pas de cluster réel) — à confirmer au premier `apply`.
+- **`amiSelectorTerms` avec `alias: al2023@latest`** sur l'`EC2NodeClass` (corrigé le 2026-09-21, voir section "Cible Kubernetes 1.36" ci-dessous) : Karpenter sélectionne automatiquement l'AMI EKS "accelerated" (drivers NVIDIA + `nvidia-container-runtime` préinstallés) pour les instances avec GPU — tout le passthrough manuel de `kind` (mounts `hostPath` sur `/dev/nvidia*`, libs userspace copiées à la main, cf. `docs/week-03-notes.md`) n'a plus de raison d'être ici. Pas encore vérifié en pratique (pas de cluster réel) — à confirmer au premier `apply`.
 - **Pod Identity pour Karpenter, IRSA pour l'EBS CSI driver** — pas un choix cohérent délibéré, une contrainte : cf. section suivante.
 - **`kubectl_manifest` (provider `gavinbunney/kubectl`) plutôt que `kubernetes_manifest`** pour les CRD Karpenter (`NodePool`/`EC2NodeClass`) : `kubernetes_manifest` exige que le CRD existe déjà au moment du `plan`, ce qui casse quand le CRD est créé dans le même `apply` (par le chart Helm juste avant) — piège classique documenté dans les exemples officiels `terraform-aws-modules/eks`.
 
@@ -46,6 +48,12 @@ Re-vérifié à la fin : `terraform init` + `validate` + `plan` (jusqu'au mur cr
 
 **Leçon générale** : ne pas faire confiance aux numéros de version qu'un LLM pose de mémoire dans un `versions.tf`, même quand le code semble cohérent et passe `validate` au moment de l'écriture — la connaissance de l'assistant a une date de péremption, et ce projet avance plus vite que sa dernière mise à jour d'entraînement. Vérifier contre le registre est peu coûteux (`curl` + un peu de JSON) comparé au risque de coder contre une API qui n'existe plus.
 
+## Cible Kubernetes 1.36 (2026-09-21)
+
+Le premier jet ciblait Kubernetes 1.30 (aligné sur `kind`) avec `amiFamily: AL2`. Vérifié contre la doc AWS et la doc Karpenter : EKS supporte en standard 1.34, 1.35 et **1.36** ; EKS ne publie plus d'AMI AL2 à partir de 1.33 ; Karpenter exige >= 1.13 pour 1.36 (chart 1.14.1 déjà en place) ; et en API v1 `amiSelectorTerms` est obligatoire, donc `amiFamily` seul n'aurait de toute façon pas passé au premier `apply`. Le `validate` ne détecte rien de tout ça — c'est un défaut d'exécution, pas de syntaxe.
+
+Changements : `cluster_version = "1.36"` (`variables.tf`), `amiSelectorTerms = [{ alias = "al2023@latest" }]` (`karpenter.tf`). `init -upgrade` + `validate` verts, `plan` s'arrête toujours au mur des credentials. Points 1.36 relevés dans les notes de version EKS, sans effet ici : volume `gitRepo` désactivé, `externalIPs` déprécié, containerd 2.x obligatoire (AMI AL2023 gérée par EKS).
+
 ## Manifestes Kubernetes EKS-spécifiques
 
 `kubernetes-eks/` — uniquement ce qui diffère réellement de `kind` : `deployment.yaml` (vLLM sans passthrough GPU manuel, image ECR), `dcgm-exporter-deployment.yaml` (stratégie envvar `NVIDIA_VISIBLE_DEVICES=all` plutôt que mounts manuels), `configmap.yaml` (retire le contournement mémoire CUDA graph spécifique à la RTX 4060 8 Go partagée — le A10G du `g5.xlarge` a 24 Go dédiés), `nvidia-device-plugin.yaml` (version upstream standard, non patchée), `storageclass.yaml` (gp3 par défaut — EKS n'en a pas nativement, contrairement à `kind`/local-path-provisioner). Tout le reste (Grafana, KEDA, Ingress, `NetworkPolicy`, Service, PVC) se réutilise tel quel depuis `kubernetes/`. Détails et ordre de déploiement dans [`kubernetes-eks/README.md`](../kubernetes-eks/README.md).
@@ -57,6 +65,6 @@ Point de correction pendant l'écriture : premier jet du DCGM exporter EKS avait
 ## Reste à faire
 
 - `terraform apply` réel — nécessite credentials AWS + accord explicite sur le coût (à faire par l'utilisateur, jamais par l'assistant, même logique que pour la suppression du cluster `kind`).
-- Vérifier en pratique que `amiFamily: AL2` sélectionne bien l'AMI accélérée attendue pour `g5.xlarge`, et que la stratégie envvar de DCGM fonctionne comme prévu.
+- Vérifier en pratique que l'alias `al2023@latest` sélectionne bien l'AMI accélérée attendue pour `g5.xlarge`, et que la stratégie envvar de DCGM fonctionne comme prévu.
 - KEDA et ingress-nginx encore installés en `kubectl apply` d'un bundle upstream plutôt qu'en Terraform (cohérent avec la méthode `kind`, mais pas unifié avec Karpenter qui lui est en `helm_release`).
 - `--max-model-len`/`--gpu-memory-utilization`, figés dans l'image pour la RTX 4060, pas reconsidérés pour les 24 Go du A10G (changement d'image, pas de manifeste).

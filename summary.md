@@ -11,7 +11,7 @@ Documented end-to-end by a senior infrastructure DevOps / SysOps.
 
 ## Status
 
-Week 6/12 — in progress
+Week 6/12 — in progress (last updated 2026-09-21; real dates and per-week validation in [README.md](README.md#timeline--how-to-read-this-repo))
 Core Platform: Weeks 1–6 (local k8s + EKS)
 Extensions: RAG + MCP + Evaluation (separate sessions, post-Week-6)
 
@@ -23,8 +23,8 @@ Extensions: RAG + MCP + Evaluation (separate sessions, post-Week-6)
 - [x] Week 4: full observability (Prometheus, DCGM, Grafana dashboards), benchmarking, GPU resource management
 - [x] Week 5: security hardening (NetworkPolicies, non-root SecurityContext, secrets review, graceful shutdown, Ingress auth + rate limiting)
 - [ ] Week 6: migration to EKS with GPU nodes (g5.xlarge), Karpenter — Terraform + EKS Kubernetes manifests written/validated, not applied/deployed (no credentials, real cost)
-- [ ] Week 7-8: KEDA autoscaling on queue depth, load testing
-- [ ] Week 9-10: full observability (Prometheus, DCGM, Grafana dashboards)
+- [ ] Week 7-8: prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), load testing on cloud GPUs
+- [ ] Week 9-10: replicate the Week 4 observability stack on EKS + cost per 1M tokens panel
 - [ ] Week 11-12: architecture diagrams, lessons-learned post
 
 ## Stack

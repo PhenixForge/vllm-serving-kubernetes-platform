@@ -1,5 +1,7 @@
 # Week 03 — Notes
 
+> Période : 2026-09-13 → 2026-09-15 (validation bouclée le 2026-09-15). Journal chronologique daté, pas l'état courant du dépôt.
+
 Cluster local : `kind` (nom `vllm-cluster`), provider **podman** (`KIND_EXPERIMENTAL_PROVIDER=podman`), créé via `kind create cluster --name vllm-cluster` (voir [week2 guide.md](week2%20guide.md)) — pas de config GPU à la création.
 
 ---

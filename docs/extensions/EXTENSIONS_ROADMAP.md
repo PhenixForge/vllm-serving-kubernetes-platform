@@ -34,7 +34,7 @@ After the core **12-week roadmap (Weeks 1–6 on local k8s + EKS migration, Week
 
 **Architecture**:
 - **Embedding**: Use `nomic-embed-text` in Ollama (CPU-only, local sidecar) or Mistral FP16 embedding capability
-- **Vector Store**: Qdrant (standalone container + PVC) or pgvector (if Valeo's PostgreSQL has it enabled)
+- **Vector Store**: Qdrant (standalone container + PVC) or pgvector (if a PostgreSQL instance with the extension is already available)
 - **Chunking**: By markdown sections (README), resource blocks (YAML), Terraform blocks (IaC)
 - **Retrieval**: Similarity search in vector store, optional reranking
 - **Generation**: Prompt → vLLM inference + streaming
@@ -75,6 +75,18 @@ After the core **12-week roadmap (Weeks 1–6 on local k8s + EKS migration, Week
 
 ---
 
+## Phase D: Vault & Packer (HashiCorp)
+
+**Objective**: Add identity and image-build capabilities once the core project is finished — Vault for short-lived secrets and per-agent identity (MCP/RAG/evaluation workloads), Packer for a pre-baked GPU AMI that cuts Karpenter cold start.
+
+**Details**: see [vault-and-packer.md](vault-and-packer.md) (Vault Secrets Operator, AWS secrets engine, AI-agent identity, optional Agent Injector, Packer AMI with before/after cold-start measurement).
+
+**Depends on**: a first real `apply` of the EKS Terraform (Packer, Vault AWS engine) and Phase A MCP (agent identity). Not a replacement for Phases A–C.
+
+**Portfolio Signal**: "Every AI agent has its own identity, minimal rights and expiring credentials; my GPU nodes boot from a pre-built image with measured cold-start gain"
+
+---
+
 ## Sequencing & Timeline
 
 | Phase | Sessions | Hours | Depends On | Deliverables |
@@ -82,6 +94,7 @@ After the core **12-week roadmap (Weeks 1–6 on local k8s + EKS migration, Week
 | **MCP** | 1 | 2–3 | Week 4 (Prometheus) | MCP server code, README, demo via Claude Code CLI |
 | **RAG** | 3 | 7–9 | MCP (optional), Week 1 (vLLM) | Chunking pipeline, Qdrant + pgvector comparison, YAML manifests, RAG-strategy.md |
 | **Evaluation** | 1–2 | 2–3 | RAG | Test suite, RAGAS results, cost breakdown |
+| **Vault & Packer** | 3–4 | 8–11 | Real EKS `apply`, MCP (agent identity) | Vault policies/auth/VSO manifests, Packer template, measured cold-start delta |
 
 **Total Additional Work**: ~11–15 hours beyond the core 12-week roadmap, spread across 5–6 independent sessions.
 
@@ -227,5 +240,5 @@ Once Week 6 is done and the core Kubernetes stack (local kind + EKS) is solid:
 
 ---
 
-**Last Updated**: September 13, 2026  
+**Last Updated**: September 21, 2026  
 **Author**: Julien (github.com/PhenixForge)

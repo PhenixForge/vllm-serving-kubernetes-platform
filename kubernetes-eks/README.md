@@ -6,7 +6,7 @@ Ce dossier ne contient **que** ce qui diffère réellement de [`../kubernetes/`]
 
 | Fichier | Pourquoi une variante EKS |
 |---|---|
-| `deployment.yaml` (vLLM) | Sur `kind`, pas de `nvidia-container-runtime` : tout le passthrough GPU (mounts `hostPath` sur `/dev/nvidia*`, libs driver copiées à la main) était manuel. Sur EKS, l'AMI accélérée choisie par Karpenter (`amiFamily: AL2`, `terraform/karpenter.tf`) l'a déjà — plus besoin de rien de tout ça. `image:` pointe vers un registre réel (ECR) au lieu d'une image chargée localement dans `kind`. |
+| `deployment.yaml` (vLLM) | Sur `kind`, pas de `nvidia-container-runtime` : tout le passthrough GPU (mounts `hostPath` sur `/dev/nvidia*`, libs driver copiées à la main) était manuel. Sur EKS, l'AMI accélérée choisie par Karpenter (`alias: al2023@latest`, `terraform/karpenter.tf`) l'a déjà — plus besoin de rien de tout ça. `image:` pointe vers un registre réel (ECR) au lieu d'une image chargée localement dans `kind`. |
 | `dcgm-exporter-deployment.yaml` | Même histoire, plus subtil : DCGM ne doit **jamais** demander `nvidia.com/gpu` en ressource (ça le mettrait en concurrence avec vLLM pour l'unique GPU d'un `g5.xlarge`) — vérifié que la version `kind` ne le fait pas non plus. Utilise la stratégie "envvar" (`NVIDIA_VISIBLE_DEVICES=all`) plutôt que les mounts manuels. |
 | `configmap.yaml` | Retire `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0`, un contournement spécifique aux 8 Go *partagés* de la RTX 4060 locale — le `g5.xlarge` a 24 Go de VRAM dédiés (A10G), cette contrainte ne devrait plus s'appliquer. |
 | `nvidia-device-plugin.yaml` | Version standard non patchée (upstream v0.20.0) — celle de `kind` était patchée pour compenser l'absence de `nvidia-container-runtime`. |

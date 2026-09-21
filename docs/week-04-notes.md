@@ -1,5 +1,7 @@
 # Week 04 — Notes
 
+> Période : 2026-09-16 (commit `b17cdbe`), dans la foulée de la semaine 3. Journal chronologique daté, pas l'état courant du dépôt.
+
 ## Reprise de session : redémarrer le cluster arrêté
 
 Même procédure qu'en semaine 3 :

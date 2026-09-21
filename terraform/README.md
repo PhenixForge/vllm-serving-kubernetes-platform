@@ -4,6 +4,23 @@ IaC pour l'infrastructure AWS uniquement (VPC, EKS, Karpenter). Les manifestes K
 
 **Rien n'a été appliqué.** Ce code a été écrit et validé (`terraform init` + `terraform validate` + `terraform plan` jusqu'au mur attendu des credentials manquantes) mais jamais provisionné — pas de credentials AWS configurées sur cette machine au moment de l'écriture.
 
+## Politique de versions (éviter le toil)
+
+Cible : **Kubernetes 1.36** (dernière version en support standard EKS, vérifiée sur la [doc officielle AWS](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html) le 2026-09-21) sur **AL2023**. Avant d'écrire ou de changer une version : calendrier de support EKS, notes de version de la version cible, matrice de compatibilité Karpenter, versions courantes des providers/modules dans le registre Terraform — jamais de mémoire. Un `validate` vert ne prouve pas qu'une version est encore supportée ; c'est ce genre d'écart, découvert après le déploiement, qui génère du toil (upgrade forcé, surcoût de support étendu, AMI introuvable). Détail dans [`../docs/week-06-notes.md`](../docs/week-06-notes.md).
+
+## Avant de lancer un `apply` : re-vérifier les versions
+
+Ce code a été écrit à une date donnée (dernière vérification : **2026-09-21**) et le projet s'étale sur plusieurs mois : entre l'écriture et un `apply` réel, EKS aura sorti une nouvelle version, une autre passera en fin de support standard, et des modules/providers auront bougé. Ne pas appliquer sur la foi de ce fichier — refaire cette vérification (quelques minutes, contre des sources officielles) :
+
+1. **Version Kubernetes** — `aws eks describe-cluster-versions --region <region>` (statut de support et `endOfStandardSupportDate` de chaque version) ou la [page EKS](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html). Ajuster `cluster_version` (`variables.tf`) sur la plus récente en support standard.
+2. **Compatibilité Karpenter** — [matrice](https://karpenter.sh/docs/upgrading/compatibility/) : version de chart minimale pour la version Kubernetes visée (`karpenter.tf`).
+3. **Notes de version EKS** de la version visée — fonctionnalités retirées/dépréciées à recouper avec `kubernetes/` et `kubernetes-eks/`.
+4. **Providers et modules** — versions courantes dans le registre Terraform, changelog des majeures (`versions.tf`, `eks.tf`, `vpc.tf`).
+5. **AMI** — l'alias `al2023@latest` suit les nouvelles publications (Karpenter remplacera les nœuds à la dérive) ; l'épingler (`al2023@vYYYYMMDD`) ou passer à une AMI Packer pour un environnement reproductible.
+6. `terraform init -upgrade && terraform validate && terraform plan`, puis relire le plan — `validate` ne détecte pas une version périmée.
+
+Puis mettre à jour la date ci-dessus.
+
 ## Ce que ça déploie
 
 - Un VPC dédié (3 AZ, subnets publics/privés, 1 NAT Gateway) — `vpc.tf`

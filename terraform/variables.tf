@@ -13,7 +13,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Version Kubernetes du control plane EKS."
   type        = string
-  default     = "1.30" # aligné sur la version du cluster kind local (semaines 3-5)
+  default     = "1.36" # dernière version en support standard EKS (vérifié sur la doc AWS le 2026-09-21). Décalage volontaire avec le kind local (1.30) : ne pas figer le cloud sur une version périmée. Karpenter >= 1.13 requis pour 1.36 (chart 1.14.1 OK).
 }
 
 variable "vpc_cidr" {
