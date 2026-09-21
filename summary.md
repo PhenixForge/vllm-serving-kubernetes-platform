@@ -23,7 +23,7 @@ Extensions: RAG + MCP + Evaluation (separate sessions, post-Week-6)
 - [x] Week 4: full observability (Prometheus, DCGM, Grafana dashboards), benchmarking, GPU resource management
 - [x] Week 5: security hardening (NetworkPolicies, non-root SecurityContext, secrets review, graceful shutdown, Ingress auth + rate limiting)
 - [ ] Week 6: migration to EKS with GPU nodes (g5.xlarge), Karpenter — Terraform + EKS Kubernetes manifests written/validated, not applied/deployed (no credentials, real cost)
-- [ ] Week 7-8: prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), load testing on cloud GPUs
+- [ ] Week 7-8 (prepared offline 2026-09-21, see docs/week7 guide.md; runs after the Week 6 apply): prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), load testing on cloud GPUs
 - [ ] Week 9-10: replicate the Week 4 observability stack on EKS + cost per 1M tokens panel
 - [ ] Week 11-12: architecture diagrams, lessons-learned post
 

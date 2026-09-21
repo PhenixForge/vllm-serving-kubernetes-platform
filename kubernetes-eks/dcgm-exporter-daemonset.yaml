@@ -1,3 +1,10 @@
+# DaemonSet et non Deployment (semaine 7) : avec Karpenter, le nombre de nœuds
+# GPU varie (1 → 2 au scale-out KEDA). Un Deployment à 1 replica ne
+# superviserait qu'UN seul nœud GPU — le second serait aveugle (pas de
+# métriques GPU, donc pas de coût/token ni d'util. par GPU pendant le test de
+# charge). Un DaemonSet suit automatiquement les nœuds qui portent le label
+# nvidia.com/gpu.present=true, y compris ceux créés à la volée.
+#
 # Variante EKS de kubernetes/dcgm-exporter-deployment.yaml. Toute la
 # complexité de la version kind (SYS_ADMIN, mounts hostPath manuels sur
 # /dev/nvidia*+libs, --disable-startup-validate, LD_LIBRARY_PATH) existait
@@ -31,14 +38,13 @@
 # PAS ENCORE VÉRIFIÉ EN PRATIQUE (pas de cluster EKS réel au moment de
 # l'écriture) — hypothèses à confirmer au premier déploiement.
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: dcgm-exporter
   namespace: monitoring
   labels:
     app: dcgm-exporter
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: dcgm-exporter

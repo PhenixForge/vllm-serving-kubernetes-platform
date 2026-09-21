@@ -11,9 +11,9 @@
 #
 # --max-model-len 880 et --gpu-memory-utilization 0.6 restent par contre figés
 # dans l'image (container/Containerfile), pas dans cette ConfigMap — les
-# reconsidérer pour profiter des 24 Go du A10G est un changement d'image, pas
-# de manifeste : pas fait cette session (pas de build/push testable sans
-# cluster réel), à traiter séparément.
+# reconsidérer pour profiter des 24 Go du A10G se fait via `args` dans
+# kubernetes-eks/deployment.yaml (surcharge du CMD de l'image, pas de rebuild) —
+# cf. docs/vllm-gpu-aws.md.
 apiVersion: v1
 kind: ConfigMap
 metadata:

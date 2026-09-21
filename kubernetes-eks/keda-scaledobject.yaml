@@ -1,0 +1,48 @@
+# Variante EKS de kubernetes/keda-scaledobject.yaml (semaine 7). Même trigger
+# (file d'attente vLLM), réglages adaptés au scaling avec Karpenter :
+#
+# - maxReplicaCount: 2, pas 4 : un replica = un g5.xlarge (un GPU). Le
+#   NodePool "gpu" (terraform/karpenter.tf) plafonne à cpu: "8" = 2 nœuds ; un
+#   3e/4e replica resterait Pending sans que Karpenter puisse le servir. Le
+#   quota AWS "Running On-Demand G and VT instances" doit aussi couvrir
+#   8 vCPU (4 par g5.xlarge) — à vérifier avant le test (guide semaine 7).
+#   Monter les deux ensemble (limite NodePool + quota) pour tester plus large.
+# - minReplicaCount: 1 : le GPU reste chaud. Le scale-to-zero (minReplicaCount 0)
+#   est une expérience distincte (coût vs cold start), à mesurer à part.
+# - behavior.scaleDown : fenêtre de stabilisation alignée sur la consolidation
+#   Karpenter (consolidateAfter: 5m) — sinon le pod part, le nœud reste, ou
+#   inversement, et on paie un GPU vide.
+# - Rappel du calcul : pour un trigger Prometheus, KEDA/HPA compare la valeur
+#   au seuil PAR replica (AverageValue) → replicas = ceil(waiting / threshold).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: vllm-autoscaler
+  namespace: vllm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vllm-server
+  minReplicaCount: 1
+  maxReplicaCount: 2
+  pollingInterval: 15
+  cooldownPeriod: 300 # ne concerne que le retour à 0 ; inactif tant que minReplicaCount >= 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+      metricName: vllm_num_requests_waiting
+      query: sum(vllm:num_requests_waiting{namespace="vllm"})
+      threshold: '5' # scale-up si plus de 5 requêtes en file par replica

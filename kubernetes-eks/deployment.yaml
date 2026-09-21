@@ -1,7 +1,7 @@
 # Déploiement vLLM sur EKS — variante de kubernetes/deployment.yaml (kind local).
 # Différences, toutes liées au passthrough GPU :
 #   - Pas de mounts hostPath sur /dev/nvidia*/opt/nvidia-libs, pas de
-#     LD_LIBRARY_PATH : sur l'AMI accélérée (Karpenter, amiFamily: AL2), le
+#     LD_LIBRARY_PATH : sur l'AMI accélérée (Karpenter, alias al2023@latest), le
 #     nvidia-container-runtime + le device plugin (kubernetes-eks/nvidia-device-plugin.yaml)
 #     injectent les devices/libs automatiquement — c'est précisément ce que
 #     le passthrough manuel de kind reproduisait à la main (cf. docs/week-03-notes.md).
@@ -13,6 +13,18 @@
 #   - Le reste (SecurityContext durci semaine 5, nodeAffinity/toleration GPU
 #     semaine 4, Recreate, probes, lifecycle, /tmp+/dev/shm) est IDENTIQUE et
 #     repris tel quel — rien de tout ça n'était spécifique à kind.
+#
+# Semaine 7 — deux changements par rapport au premier jet de la semaine 6,
+# dictés par le scale-out KEDA (plusieurs replicas, un GPU par nœud) :
+#   - Cache modèle en emptyDir au lieu du PVC `vllm-model-cache` : un volume EBS
+#     (gp3) est ReadWriteOnce ET lié à une AZ — un 2e pod sur un 2e nœud GPU ne
+#     pourrait pas le monter (Multi-Attach / mauvaise AZ) et resterait bloqué.
+#     Conséquence assumée : chaque pod télécharge les poids (~4 Go) depuis
+#     Hugging Face à froid. C'est LA ligne de base du cold start à mesurer ; les
+#     optimisations (EFS RWX, poids dans l'AMI via Packer) se comparent à elle.
+#   - startupProbe : sur un nœud neuf le démarrage = pull d'image + téléchargement
+#     des poids + chargement en VRAM ; sans startupProbe, la liveness
+#     (120 s + 3x20 s) tuerait le pod avant la fin. Voir docs/week7 guide.md.
 #
 # PAS ENCORE VÉRIFIÉ EN PRATIQUE (pas de cluster EKS réel au moment de
 # l'écriture) — en particulier le comportement sans privileged/SYS_ADMIN sur
@@ -65,6 +77,18 @@ spec:
         # Remplacer par l'URI ECR réel avant le premier déploiement.
         image: <ECR_REPO_URI>:latest
         imagePullPolicy: IfNotPresent
+        # Arguments vLLM propres au A10G 24 Go : REMPLACENT le CMD de l'image
+        # (ENTRYPOINT = `vllm serve`, vérifié dans le Dockerfile v0.20.2), qui est
+        # figé pour la RTX 4060 8 Go partagée (--max-model-len 880,
+        # --gpu-memory-utilization 0.6). Pas de rebuild d'image nécessaire.
+        # Justification et variante FP16 : docs/vllm-gpu-aws.md.
+        args:
+        - TheBloke/Mistral-7B-Instruct-v0.1-AWQ
+        - --quantization=awq_marlin
+        - --dtype=half # AWQ = fp16 ; le config.json du modèle annonce bfloat16
+        - --max-model-len=8192
+        - --gpu-memory-utilization=0.90
+        - --trust-request-chat-template
         # Repris tel quel de kind (semaine 5) : runAsNonRoot fonctionnait déjà
         # sans capacité particulière une fois le passthrough manuel retiré —
         # devrait donc marcher aussi bien, sinon mieux, avec un vrai
@@ -100,18 +124,24 @@ spec:
             cpu: "4"
             memory: "12Gi"
             nvidia.com/gpu: "1"
+        # Laisse jusqu'à 15 min (90 x 10 s) au démarrage à froid ; liveness et
+        # readiness ne s'appliquent qu'une fois celle-ci réussie.
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          periodSeconds: 10
+          failureThreshold: 90
         readinessProbe:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 60
           periodSeconds: 10
-          failureThreshold: 6
+          failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 120
           periodSeconds: 20
           failureThreshold: 3
         lifecycle:
@@ -133,5 +163,5 @@ spec:
           medium: Memory
           sizeLimit: 2Gi
       - name: model-cache
-        persistentVolumeClaim:
-          claimName: vllm-model-cache
+        emptyDir:
+          sizeLimit: 20Gi # poids AWQ ~4 Go + marge ; le disque racine du nœud fait 100 Gi (karpenter.tf)

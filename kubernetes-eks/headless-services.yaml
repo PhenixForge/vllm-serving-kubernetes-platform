@@ -1,0 +1,40 @@
+# Services headless (clusterIP: None) — un enregistrement DNS A PAR POD prêt.
+# Nécessaires dès qu'il y a plus d'un replica vLLM / plus d'un nœud GPU
+# (semaine 7) : la config Prometheus de kind cible le Service ClusterIP
+# `vllm-service`, ce qui fait atterrir chaque scrape sur UN pod au hasard —
+# avec 2 replicas, `sum(vllm:num_requests_waiting)` ne verrait qu'un pod sur
+# deux, en alternance : le signal de scaling KEDA deviendrait faux et
+# oscillant. Prometheus (kubernetes-eks/prometheus-configmap.yaml) résout ces
+# noms via dns_sd_configs : pas de RBAC/API Kubernetes requis, même
+# philosophie "YAML brut" que le reste du monitoring.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-service-headless
+  namespace: vllm
+  labels:
+    app: vllm-server
+spec:
+  clusterIP: None
+  selector:
+    app: vllm-server
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcgm-exporter-headless
+  namespace: monitoring
+  labels:
+    app: dcgm-exporter
+spec:
+  clusterIP: None
+  selector:
+    app: dcgm-exporter
+  ports:
+  - name: metrics
+    port: 9400
+    targetPort: 9400

@@ -6,13 +6,22 @@ charge et repérer la limite d'OOM sur la KV cache (--max-model-len 880,
 --gpu-memory-utilization 0.6, cf. container/Containerfile — marge
 volontairement réduite, peu de VRAM libre sur cette RTX 4060 8 Go).
 
+Semaine 7 : mode soutenu (--duration) — concurrence FIXE pendant N secondes,
+résumé par fenêtre de temps horodaté. Sert à observer l'effet d'un scale-out
+(KEDA + Karpenter) : la latence p95 et le throughput par fenêtre doivent
+s'améliorer quand le 2e replica devient prêt. À lancer dans le cluster (cf.
+kubernetes-eks/loadtest.yaml), pas via l'Ingress (rate limiting 5 req/s).
+
 Usage typique (depuis un `kubectl port-forward svc/vllm-service 8000:8000 -n vllm`) :
     python scripts/benchmark.py --levels 1,2,4,8,16,32
+    python scripts/benchmark.py --duration 900 --concurrency 32 --window 15
 """
 import argparse
 import os
 import statistics
+import threading
 import time
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
@@ -70,6 +79,49 @@ def run_level(url, concurrency, n_requests, max_tokens):
     return len(failed) > 0
 
 
+def _print_window(t_start, t_end, samples):
+    ok = [s for s in samples if s["ok"]]
+    failed = len(samples) - len(ok)
+    stamp = datetime.fromtimestamp(t_end, timezone.utc).strftime("%H:%M:%SZ")
+    if ok:
+        lat = sorted(s["dt"] for s in ok)
+        p50 = lat[len(lat) // 2]
+        p95 = lat[min(len(lat) - 1, int(0.95 * len(lat)))]
+        tps = sum(s["tokens"] for s in ok) / (t_end - t_start)
+        print(f"{stamp} ok={len(ok)} failed={failed} p50={p50:.2f}s p95={p95:.2f}s tok/s={tps:.1f}", flush=True)
+    else:
+        print(f"{stamp} ok=0 failed={failed}", flush=True)
+
+
+def run_sustained(url, concurrency, duration, window, max_tokens):
+    """Concurrence fixe pendant `duration` s ; une ligne de résumé toutes les `window` s."""
+    deadline = time.time() + duration
+    lock = threading.Lock()
+    samples = []  # (t_fin, résultat)
+
+    def worker():
+        while time.time() < deadline:
+            r = run_one(url, max_tokens)
+            with lock:
+                samples.append((time.time(), r))
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(concurrency)]
+    t0 = time.time()
+    for t in threads:
+        t.start()
+
+    win_start = t0
+    while win_start < deadline:
+        time.sleep(min(window, max(0.0, deadline - win_start)))
+        win_end = time.time()
+        with lock:
+            batch = [r for (t, r) in samples if win_start <= t < win_end]
+        _print_window(win_start, win_end, batch)
+        win_start = win_end
+    for t in threads:
+        t.join(timeout=130)  # requêtes en vol : timeout de run_one = 120 s
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default=os.environ.get("VLLM_HOST", "localhost"))
@@ -77,6 +129,9 @@ def main():
     parser.add_argument("--max-tokens", default=200, type=int)
     parser.add_argument("--requests-per-level", default=20, type=int)
     parser.add_argument("--levels", default="1,2,4,8,16,32")
+    parser.add_argument("--duration", type=int, default=0, help="Mode soutenu : durée en secondes (0 = balayage par niveaux).")
+    parser.add_argument("--concurrency", type=int, default=32, help="Mode soutenu : nombre de requêtes simultanées.")
+    parser.add_argument("--window", type=int, default=15, help="Mode soutenu : taille de la fenêtre de résumé, en secondes.")
     parser.add_argument(
         "--no-stop-on-failure",
         action="store_true",
@@ -89,6 +144,11 @@ def main():
     # cf. docs/week-03-notes.md) et l'image tourne avec --trust-request-chat-template
     # (le client devrait fournir son propre template pour l'endpoint chat).
     url = f"http://{args.host}:{args.port}/v1/completions"
+    if args.duration > 0:
+        print(f"--- Sustained load: {MODEL} @ {url} — concurrency={args.concurrency}, {args.duration}s, window={args.window}s ---", flush=True)
+        run_sustained(url, args.concurrency, args.duration, args.window, args.max_tokens)
+        return
+
     levels = [int(x) for x in args.levels.split(",")]
 
     print(f"--- Load benchmark: {MODEL} @ {url} ---")

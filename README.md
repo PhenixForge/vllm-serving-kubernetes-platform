@@ -272,7 +272,7 @@ graph TB
 - [x] **Week 4** — Prometheus/DCGM/Grafana observability, load benchmarking (128 concurrent requests, 0 failures), GPU resource management (nodeAffinity/tolerations)
 - [x] **Week 5** — security hardening: NetworkPolicies (written, inert on kindnet — no policy engine), non-root/read-only SecurityContext, secrets review (none needed — public model), graceful shutdown, Ingress Basic Auth + rate limiting
 - [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling. Terraform (`terraform/`) and EKS-specific Kubernetes manifests (`kubernetes-eks/`) written and validated; not yet applied/deployed (no AWS credentials, real cost — deliberately left for manual apply)
-- [ ] **Week 7-8** — prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), with load testing and latency benchmarks on real cloud GPUs
+- [ ] **Week 7-8** — *prepared offline on 2026-09-21 (guide, EKS manifests, load/timeline scripts — see [`docs/week7 guide.md`](docs/week7%20guide.md)); runs after the Week 6 `apply`.* Prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), with load testing and latency benchmarks on real cloud GPUs
 - [ ] **Week 9-10** — replicate the observability stack validated in Week 4 on EKS and add the cloud-only panel: cost per 1M tokens (TTFT, GPU util, throughput dashboards already exist)
 - [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article
 
@@ -412,6 +412,14 @@ Re-verifying against the actually-downloaded module source (not memory) caught t
 
 ### Even AI review needs a second AI review
 Before committing the EKS-specific Kubernetes manifests, I caught (or rather, Claude caught itself) that its first draft of the DCGM Exporter manifest requested `nvidia.com/gpu` as a resource — which would have made the monitoring DaemonSet compete with vLLM for the single GPU on a `g5.xlarge` node. The fix (an env-var-based device injection strategy instead of a resource claim) was already the pattern used on `kind`; the bug only existed because the new EKS version wasn't written by directly extending working code, it was reasoned from scratch. A reminder to diff against what's already proven to work, not just what looks idiomatic for the new environment.
+
+---
+
+## Week 7 (prepared) — lessons learned before touching the cluster
+
+Preparing the autoscaling stage *without* a cluster turned up problems that a single-replica setup on `kind` can never show, none of which raises an error: an EBS-backed model cache that a second GPU node can't mount, Prometheus scraping one random pod behind a ClusterIP so the autoscaling signal would be wrong from two replicas up, a liveness probe that would kill a pod still downloading its weights on a fresh node, a DCGM exporter that would monitor only one of two GPU nodes, and vLLM arguments tuned for an 8 GB desktop card that would leave a 24 GB A10G mostly idle while looking perfectly healthy.
+
+The full catalogue — every silent failure across the project, why it was invisible, and how it was finally caught — is in [`docs/retour-d-experience.md`](docs/retour-d-experience.md) (French). The vLLM argument changes for the AWS GPU are in [`docs/vllm-gpu-aws.md`](docs/vllm-gpu-aws.md).
 
 ---
 

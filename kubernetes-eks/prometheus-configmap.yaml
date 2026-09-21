@@ -1,0 +1,54 @@
+# Variante EKS de kubernetes/prometheus-configmap.yaml (semaine 7). Même nom de
+# ConfigMap : à appliquer À LA PLACE de la version kind, pas en plus.
+#
+# Différence : découverte des cibles par DNS sur des Services headless
+# (kubernetes-eks/headless-services.yaml) au lieu d'un static_config vers un
+# Service ClusterIP. Avec plusieurs replicas vLLM et plusieurs nœuds GPU,
+# chaque pod/nœud devient une cible distincte : les sommes de la query KEDA
+# (sum(vllm:num_requests_waiting)) et les panels Grafana agrègent alors tous
+# les pods au lieu d'un seul tiré au hasard à chaque scrape.
+# Le NetworkPolicy existant (monitoring -> vllm:8000) couvre déjà ce trafic.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: vllm
+        metrics_path: /metrics
+        dns_sd_configs:
+          - names: ["vllm-service-headless.vllm.svc.cluster.local"]
+            type: A
+            port: 8000
+            refresh_interval: 15s
+        relabel_configs:
+          # label "namespace" requis par la query KEDA (cf. version kind) ;
+          # posé en dur puisqu'il n'y a pas de service discovery Kubernetes.
+          - target_label: namespace
+            replacement: vllm
+          # une série par pod (l'adresse IP identifie le replica dans Grafana).
+          - source_labels: [__address__]
+            regex: "([^:]+):.*"
+            target_label: pod_ip
+            replacement: "$1"
+
+      - job_name: dcgm-exporter
+        dns_sd_configs:
+          - names: ["dcgm-exporter-headless.monitoring.svc.cluster.local"]
+            type: A
+            port: 9400
+            refresh_interval: 15s
+        relabel_configs:
+          - source_labels: [__address__]
+            regex: "([^:]+):.*"
+            target_label: pod_ip
+            replacement: "$1"
+
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]

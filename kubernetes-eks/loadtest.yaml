@@ -1,0 +1,95 @@
+# Générateur de charge DANS le cluster (semaine 7) — namespace dédié `loadtest`.
+#
+# Pourquoi dans le cluster et pas depuis un poste via l'Ingress :
+#   - l'Ingress limite à 5 req/s par IP (semaine 5, limit-rps) : un test de
+#     charge par là mesurerait le rate limiter, pas vLLM ;
+#   - on évite d'ajouter latence Internet + NAT + contrôleur d'ingress à la
+#     mesure de scaling (l'ingress se valide à part : auth 401/200 + 429) ;
+#   - découple ce test du choix du contrôleur d'ingress (ingress-nginx est
+#     archivé, décision en attente).
+#
+# Le NetworkPolicy deny-all du namespace vllm est RÉELLEMENT appliqué sur EKS
+# (VPC CNI) : sans la policy `vllm-allow-from-loadtest` ci-dessous, le Job
+# n'atteindrait pas vLLM. Elle est ADDITIVE (les policies de ingress se
+# cumulent) et à supprimer après les tests.
+#
+# Usage (le script est fourni par ConfigMap pour éviter de builder une image) :
+#   kubectl create namespace loadtest
+#   kubectl -n loadtest create configmap benchmark-script --from-file=benchmark.py=scripts/benchmark.py
+#   kubectl apply -f kubernetes-eks/loadtest.yaml
+#   kubectl -n loadtest logs -f job/vllm-loadtest
+# Rejouer avec d'autres paramètres : éditer `args`, supprimer puis ré-appliquer le Job.
+#
+# PAS ENCORE VÉRIFIÉ EN PRATIQUE (pas de cluster EKS réel).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vllm-allow-from-loadtest
+  namespace: vllm
+spec:
+  podSelector:
+    matchLabels:
+      app: vllm-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: loadtest
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vllm-loadtest
+  namespace: loadtest
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: loadgen
+        image: docker.io/library/python:3.14-slim
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        env:
+        - name: HOME
+          value: /tmp
+        - name: PIP_DISABLE_PIP_VERSION_CHECK
+          value: "1"
+        command: ["/bin/sh", "-c"]
+        args:
+        - >-
+          pip install --no-cache-dir --user requests &&
+          python /scripts/benchmark.py
+          --host vllm-service.vllm.svc.cluster.local
+          --duration 900 --concurrency 32 --window 15
+        resources:
+          requests:
+            cpu: 500m
+            memory: 256Mi
+          limits:
+            cpu: "1"
+            memory: 512Mi
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: script
+        configMap:
+          name: benchmark-script
+      - name: tmp
+        emptyDir: {}
