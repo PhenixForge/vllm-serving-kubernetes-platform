@@ -1,0 +1,124 @@
+name: CI
+
+# Pipeline minimal : trois garde-fous rapides sur chaque push/PR (lint YAML,
+# lint du Containerfile, validation Terraform sans credentials AWS), plus un
+# job de build (et push sur main uniquement) de l'image container.
+#
+# Portée volontairement limitée : pas de déploiement automatique (le cluster
+# EKS n'est pas encore provisionné - cf. README, section Status) et pas de
+# `terraform plan`/`apply` (nécessiterait des credentials AWS en secret pour
+# un repo dont l'infra réelle n'est pas encore debout). Ce pipeline valide ce
+# qui peut l'être sans compte cloud ; le plan/apply viendra avec la mise en
+# service réelle d'EKS.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  yaml-lint:
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install yamllint
+
+      - name: yamllint (config partagée .yamllint.yml)
+        run: >
+          yamllint -c .yamllint.yml
+          kubernetes/ kubernetes-eks/ kind-gpu-config.yaml .github/
+
+  terraform:
+    name: Terraform fmt & validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform init (sans backend, aucun credential AWS requis)
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate
+
+  containerfile-lint:
+    name: Lint Containerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: container/Containerfile
+
+  container-build:
+    name: Build & push container image
+    runs-on: ubuntu-latest
+    needs: [yaml-lint, terraform, containerfile-lint]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # L'image de base (docker.io/vllm/vllm-openai) fait ~8 Go compressés
+      # (CUDA + PyTorch) - largement au-dessus des ~14 Go disponibles par
+      # défaut sur un runner ubuntu-latest. On libère l'espace occupé par le
+      # tooling préinstallé (Android SDK, .NET, GHC, etc.) dont ce job n'a
+      # pas besoin, plutôt que de risquer un "no space left on device".
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Compute image name (GHCR impose un chemin en minuscules)
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (push seulement sur main)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./container
+          file: ./container/Containerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.image.outputs.name }}:latest
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,4 +1,4 @@
-# Ce manifeste augmente les Pods si la métrique 
+# Ce manifeste augmente les Pods si la métrique
 # vllm:num_requests_waiting dépasse un certain seuil dans Prometheus
 apiVersion: keda.sh/v1alpha1 # doc = https://keda.sh/docs/2.20/migration/
 kind: ScaledObject

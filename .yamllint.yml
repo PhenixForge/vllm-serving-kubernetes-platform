@@ -1,0 +1,32 @@
+# Config yamllint pour ce repo.
+#
+# Écarts volontaires par rapport à la config "default" de yamllint :
+# - line-length: désactivé — les manifestes Kubernetes ont des lignes de
+#   commentaire longues (explications en français), pas de valeur à forcer
+#   un wrap arbitraire à 80 colonnes ici.
+# - document-start: désactivé — aucun des manifestes du repo n'utilise `---`
+#   en tête de fichier, et ils sont tous à document unique.
+# - truthy: désactivé — Kubernetes/Helm acceptent `on`/`off`/`yes`/`no` dans
+#   certains champs (et certains manifestes du repo en dépendent), pas la
+#   peine de forcer `true`/`false` partout.
+# - comments-indentation: désactivé — friction connue avec le style de
+#   commentaires en fin de ligne utilisé dans les manifestes.
+# - indentation.indent-sequences: "whatever" — le style Kubernetes usuel
+#   (items de liste alignés avec la clé parente, ex. sous `containers:`)
+#   n'est pas le style par défaut attendu par yamllint ; accepter les deux
+#   styles tant qu'un fichier donné reste cohérent avec lui-même.
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  truthy: disable
+  comments-indentation: disable
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+  braces:
+    max-spaces-inside: 1
+
+ignore: |
+  terraform/.terraform/
