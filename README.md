@@ -1,4 +1,5 @@
 [![Status](https://img.shields.io/badge/status-Week_6%2F12-orange)](#status)
+[![CI](https://github.com/PhenixForge/vllm-serving-kubernetes-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/PhenixForge/vllm-serving-kubernetes-platform/actions/workflows/ci.yml)
 [![Versions verified](https://img.shields.io/badge/versions_verified-2026--09--21-green)](#version-policy--provisioning-without-toil)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.36_(EKS_target)-326CE5?logo=kubernetes&logoColor=white)](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html)
 [![Terraform](https://img.shields.io/badge/Terraform-%E2%89%A51.7-844FBA?logo=terraform&logoColor=white)](terraform/)
@@ -19,7 +20,7 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 6/12 — in progress** · last updated 2026-09-21 (see [Timeline](#timeline--how-to-read-this-repo))
+**Week 6/12 — in progress** · last updated 2026-09-28 (see [Timeline](#timeline--how-to-read-this-repo))
 
 Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
 
@@ -44,6 +45,7 @@ This is a **multi-month, part-time project**, not a 12-calendar-week sprint. "We
 | 2026-07-03 → 08-18 | Gap in commits; documentation pass on 2026-08-18 (guides for Weeks 1–5, incl. the new Week 5 security guide) |
 | 2026-09-13 → 09-17 | Weeks 3–6 in one focused stretch — Kubernetes on kind, observability, security hardening, EKS Terraform |
 | 2026-09-21 | Terraform/EKS re-verified and moved to Kubernetes 1.36 (see below) |
+| 2026-09-28 | CI pipeline added (GitHub Actions: YAML lint, `terraform fmt`/`validate`, Containerfile lint, image build+push to GHCR on merge to `main`) — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 
 ### Validated so far — nothing here restarts from zero
 
