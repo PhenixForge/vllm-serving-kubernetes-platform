@@ -276,7 +276,8 @@ graph TB
 - [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling. Terraform (`terraform/`) and EKS-specific Kubernetes manifests (`kubernetes-eks/`) written and validated; not yet applied/deployed (no AWS credentials, real cost — deliberately left for manual apply)
 - [ ] **Week 7-8** — *prepared offline on 2026-09-21 (guide, EKS manifests, load/timeline scripts — see [`docs/week7 guide.md`](docs/week7%20guide.md)); runs after the Week 6 `apply`.* Prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), with load testing and latency benchmarks on real cloud GPUs
 - [ ] **Week 9-10** — replicate the observability stack validated in Week 4 on EKS and add the cloud-only panel: cost per 1M tokens (TTFT, GPU util, throughput dashboards already exist)
-- [ ] **Week 11-12** — architecture diagrams, clean README, lessons-learned article
+- [x] **Week 11** — architecture diagrams (ASCII + Mermaid, incl. the two security views) and lessons-learned article ([`docs/retour-d-experience.md`](docs/retour-d-experience.md)) — done ahead of schedule, produced incrementally as each week closed rather than saved for the end
+- [ ] **Week 12** — README cleanup pass: Status, Timeline, "Validated so far" and this Roadmap currently overlap as four separate progress trackers — worth consolidating into one
 
 ---
 ## Observability targets
