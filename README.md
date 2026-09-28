@@ -20,55 +20,9 @@ Documented end-to-end by a senior infrastructure engineer learning AI infrastruc
 
 ## Status
 
-**Week 6/12 — in progress** · last updated 2026-09-28 (see [Timeline](#timeline--how-to-read-this-repo))
+**Week 6/12 — in progress.** Full current state, week-by-week validation history (with commit references) and what's left: **[`STATUS.md`](STATUS.md)** — that file is the single source of truth; this README doesn't restate it.
 
-Local vLLM inference running on a single personal Nvidia graphic card (RTX 4060 with 8 GB VRAM) from a Docker container, with Mistral 7B Instruct v0.1 AWQ quantization. Baseline latency and throughput metrics captured.
-
-Deployed on a local Kubernetes cluster (kind) with GPU passthrough: Deployment, Service, Ingress (SSE streaming validated end-to-end), PVC and KEDA autoscaling manifests applied.
-
-Full observability stack live: Prometheus + DCGM Exporter (GPU metrics) + Grafana dashboard. KEDA's Prometheus trigger is now healthy end-to-end (`HPAActive=True`). Load benchmarking swept up to 128 concurrent requests with zero failures — vLLM's scheduler throttles admission under KV cache pressure (99.5% usage observed) instead of OOMing.
-
-Security hardening done: `vllm-server` runs non-root (UID 1000), no capabilities, read-only root filesystem, no `privileged`. NetworkPolicies written and applied (inert on this cluster's CNI — no policy engine, documented). Ingress locked down with Basic Auth + rate limiting.
-
-EKS migration: Terraform written for VPC + EKS + Karpenter-managed GPU node pool (see [`terraform/`](terraform/)) — validated (`init`/`validate`/`plan` up to the expected missing-credentials wall) but **not applied**. EKS-specific Kubernetes manifests also written (see [`kubernetes-eks/`](kubernetes-eks/) — no manual GPU passthrough needed there, unlike `kind`) but not yet deployed to a real cluster. No AWS credentials configured yet, and standing up real GPU nodes costs real money — that step is deliberately left for a deployer with an AWS account and budget sign-off, not run automatically.
-
----
-
-## Timeline — how to read this repo
-
-This is a **multi-month, part-time project**, not a 12-calendar-week sprint. "Week N" is a unit of *content* inherited from the original plan; the dates below are the real ones (from the commit history).
-
-| Period | What happened |
-|---|---|
-| 2026-05-09 → 05-11 | Week 1 — local vLLM inference, baseline benchmark, README |
-| 2026-05-26 → 07-03 | Week 2 — containerisation (`Containerfile`, GPU tuning on 06-30, OpenAI-compatible chat), Week 1–2 guides and feedback |
-| 2026-07-03 → 08-18 | Gap in commits; documentation pass on 2026-08-18 (guides for Weeks 1–5, incl. the new Week 5 security guide) |
-| 2026-09-13 → 09-17 | Weeks 3–6 in one focused stretch — Kubernetes on kind, observability, security hardening, EKS Terraform |
-| 2026-09-21 | Terraform/EKS re-verified and moved to Kubernetes 1.36 (see below) |
-| 2026-09-28 | CI pipeline added (GitHub Actions: YAML lint, `terraform fmt`/`validate`, Containerfile lint, image build+push to GHCR on merge to `main`) — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
-
-### Validated so far — nothing here restarts from zero
-
-Each week below was validated when it was done, and the result is committed. The next stages build on these; they do not redo them. The commit history is kept as-is (no rewriting), so the dates below are the real ones.
-
-| Week | Dates | Commits | Validated by | Carries over to EKS |
-|---|---|---|---|---|
-| 1 | 2026-05-09 | `77b313e`, `d4ab0e4` | Baseline latency/throughput captured ([`week-01-baseline.md`](docs/week-01-baseline.md)) | Benchmark script, model choice |
-| 2 | 2026-05-26 → 07-03 | `5dafe1e`, `0f8befd`, `e965b81`…`dfd515e` | Containerised vLLM answering OpenAI-compatible requests | `container/Containerfile` (image pushed to ECR) |
-| 3 | 2026-09-13 → 09-15 | `c0ae78a`…`44f1db3`, closed by `fba5c9d` | Real inference from a pod on kind (2026-09-14); Ingress + SSE streaming; validation closed 2026-09-15 | Service, PVC, ConfigMap, Ingress manifests |
-| 4 | 2026-09-16 | `b17cdbe` | KEDA `HPAActive=True` on a live Prometheus value; 128 concurrent requests, 0 failures | Prometheus, Grafana, KEDA `ScaledObject`, DCGM (EKS variant) |
-| 5 | 2026-09-16 | `d1490b1` | Non-root inference end to end; Basic Auth 401/401/200; ~7 s graceful shutdown; NetworkPolicy inertness proven on kindnet | `network-policy.yaml` unchanged (enforced by VPC CNI on EKS), hardened Deployment |
-| 6 | 2026-09-17, revised 2026-09-21 | `6405b71`*, `be4b0a6` | `terraform init` + `validate` green; `plan` stops at the expected missing-credentials wall — **not applied** | — (this is the new work) |
-
-\* The message of `6405b71` reads "week5: Terraform code" but the content is the Week 6 Terraform; history was not rewritten to change it.
-
-What is left is genuinely new: the real `apply`, then proving on EKS what was already proven on kind (KEDA scaling and load testing on cloud GPUs, the same observability stack, cost per 1M tokens).
-
-Consequences for the reader, and for the maintainer:
-
-- **Everything is a dated snapshot.** Versions, support windows and "latest" claims are true *as of the date stated next to them*; upstream moves on during a months-long project (the EKS/Terraform layer had drifted from the versions first pinned by the time it was reviewed — see the Week 6 lessons). Each week's notes are a chronological log, not a description of the current state — the current state is this README and the manifests.
-- **Re-verify before you provision.** The EKS layer was written months before any real `apply` is expected. A pre-apply checklist (support calendar, compatibility matrix, current module/provider versions) lives in [`terraform/README.md`](terraform/README.md#avant-de-lancer-un-apply--re-vérifier-les-versions).
-- **Deferred work is deliberate, not forgotten.** The real `apply` needs AWS credentials and a budget sign-off; extensions (MCP, RAG, evaluation, Vault, Packer) are scheduled after the core project — see [`docs/extensions/EXTENSIONS_ROADMAP.md`](docs/extensions/EXTENSIONS_ROADMAP.md).
+Local vLLM inference validated end-to-end on a personal GPU, deployed on Kubernetes (`kind`) with autoscaling and full observability, security-hardened (non-root, NetworkPolicies, Ingress auth). EKS migration (Terraform + manifests) written and validated but **not applied** — no AWS credentials, real GPU cost, deliberately left for a deployer with budget sign-off. CI pipeline (lint, `terraform validate`, image build/push) runs on every push — see the badge above.
 
 ---
 
@@ -268,16 +222,7 @@ graph TB
 
 ## Roadmap
 
-- [x] **Week 1** — local vLLM inference working (Mistral 7B AWQ on RTX 4060, baseline metrics captured)
-- [x] **Week 2** — clean Containerfile, all OpenAI-compatible endpoints tested
-- [x] **Week 3** — Kubernetes deployment on kind (local), GPU passthrough, Ingress + SSE streaming validated, KEDA autoscaler wired (Prometheus trigger pending Week 4)
-- [x] **Week 4** — Prometheus/DCGM/Grafana observability, load benchmarking (128 concurrent requests, 0 failures), GPU resource management (nodeAffinity/tolerations)
-- [x] **Week 5** — security hardening: NetworkPolicies (written, inert on kindnet — no policy engine), non-root/read-only SecurityContext, secrets review (none needed — public model), graceful shutdown, Ingress Basic Auth + rate limiting
-- [ ] **Week 6** — migration to EKS with GPU nodes (g5.xlarge), Karpenter node autoscaling. Terraform (`terraform/`) and EKS-specific Kubernetes manifests (`kubernetes-eks/`) written and validated; not yet applied/deployed (no AWS credentials, real cost — deliberately left for manual apply)
-- [ ] **Week 7-8** — *prepared offline on 2026-09-21 (guide, EKS manifests, load/timeline scripts — see [`docs/week7 guide.md`](docs/week7%20guide.md)); runs after the Week 6 `apply`.* Prove on EKS the KEDA queue-depth autoscaling already validated on kind (Week 4), with load testing and latency benchmarks on real cloud GPUs
-- [ ] **Week 9-10** — replicate the observability stack validated in Week 4 on EKS and add the cloud-only panel: cost per 1M tokens (TTFT, GPU util, throughput dashboards already exist)
-- [x] **Week 11** — architecture diagrams (ASCII + Mermaid, incl. the two security views) and lessons-learned article ([`docs/retour-d-experience.md`](docs/retour-d-experience.md)) — done ahead of schedule, produced incrementally as each week closed rather than saved for the end
-- [ ] **Week 12** — README cleanup pass: Status, Timeline, "Validated so far" and this Roadmap currently overlap as four separate progress trackers — worth consolidating into one
+Week-by-week plan and status (done/pending), with commit references: see **[`STATUS.md`](STATUS.md)**.
 
 ---
 ## Observability targets
